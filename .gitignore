@@ -1,0 +1,19 @@
+# Gradle / build
+.gradle/
+build/
+out/
+
+# Kotlin
+.kotlin/
+
+# Fabric Loom dev run directory
+run/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

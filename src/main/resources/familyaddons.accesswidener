@@ -1,0 +1,4 @@
+accessWidener v2 official
+
+accessible method net/minecraft/client/multiplayer/ClientLevel addParticle (Lnet/minecraft/core/particles/ParticleOptions;ZZDDDDDD)V
+accessible field net/minecraft/client/Camera position Lnet/minecraft/world/phys/Vec3;

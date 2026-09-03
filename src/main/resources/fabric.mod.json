@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "familyaddons",
+  "version": "${version}",
+  "name": "FamilyAddons",
+  "description": "Personal Hypixel SkyBlock utility mod.",
+  "authors": [{"name": "KyoWaa"}],
+  "icon": "assets/familyaddons/icon.png",
+  "license": "All Rights Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      {
+        "adapter": "kotlin",
+        "value": "org.kyowa.familyaddons.FamilyAddons"
+      }
+    ],
+    "modmenu": [
+      {
+        "adapter": "kotlin",
+        "value": "org.kyowa.familyaddons.ModMenuIntegration"
+      }
+    ]
+  },
+  "accessWidener": "familyaddons.accesswidener",
+  "mixins": [
+    "familyaddons.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "fabric-api": "*",
+    "fabric-language-kotlin": "*",
+    "minecraft": "~26.2"
+  }
+}

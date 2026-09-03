@@ -1,0 +1,1836 @@
+[
+  {
+    "name": "Andrew",
+    "location": "Hub",
+    "x": 38.0,
+    "y": 68.0,
+    "z": -47.0
+  },
+  {
+    "name": "Duke",
+    "location": "Hub",
+    "x": -7.0,
+    "y": 70.0,
+    "z": -90.0
+  },
+  {
+    "name": "Felix",
+    "location": "Hub",
+    "x": -26.0,
+    "y": 68.0,
+    "z": -104.0
+  },
+  {
+    "name": "Leo",
+    "location": "Hub",
+    "x": -8.0,
+    "y": 70.0,
+    "z": -76.0
+  },
+  {
+    "name": "Liam",
+    "location": "Hub",
+    "x": -76.0,
+    "y": 70.0,
+    "z": -108.0
+  },
+  {
+    "name": "Lynn",
+    "location": "Hub",
+    "x": -22.0,
+    "y": 68.0,
+    "z": -125.0
+  },
+  {
+    "name": "Jack",
+    "location": "Hub",
+    "x": -1.0,
+    "y": 70.0,
+    "z": -55.0
+  },
+  {
+    "name": "Jamie",
+    "location": "Hub",
+    "x": -36.0,
+    "y": 70.0,
+    "z": -37.0
+  },
+  {
+    "name": "Tom",
+    "location": "Hub",
+    "x": 28.0,
+    "y": 69.0,
+    "z": -58.0
+  },
+  {
+    "name": "Ryu",
+    "location": "Hub",
+    "x": 28.0,
+    "y": 70.0,
+    "z": -117.0
+  },
+  {
+    "name": "Stella",
+    "location": "Hub",
+    "x": 17.0,
+    "y": 70.0,
+    "z": -101.0
+  },
+  {
+    "name": "Vex",
+    "location": "Hub",
+    "x": -17.0,
+    "y": 69.0,
+    "z": -82.0
+  },
+  {
+    "name": "Adventurer",
+    "location": "Hub",
+    "x": -41.0,
+    "y": 70.0,
+    "z": -64.0
+  },
+  {
+    "name": "Alchemist",
+    "location": "Hub",
+    "x": 41.0,
+    "y": 70.0,
+    "z": -63.0
+  },
+  {
+    "name": "Tyashoi Alchemist",
+    "location": "Hub",
+    "x": 41.0,
+    "y": 68.0,
+    "z": -55.0
+  },
+  {
+    "name": "Amelia",
+    "location": "Hub",
+    "x": -44.0,
+    "y": 85.0,
+    "z": -4.0
+  },
+  {
+    "name": "Armorsmith",
+    "location": "Hub",
+    "x": -9.0,
+    "y": 68.0,
+    "z": -134.0
+  },
+  {
+    "name": "Auction Master",
+    "location": "Hub",
+    "x": -46.0,
+    "y": 73.0,
+    "z": -90.0
+  },
+  {
+    "name": "Baker",
+    "location": "Hub",
+    "x": 8.0,
+    "y": 71.0,
+    "z": -95.0
+  },
+  {
+    "name": "Banker",
+    "location": "Hub",
+    "x": -24.0,
+    "y": 71.0,
+    "z": -58.0
+  },
+  {
+    "name": "Bartender",
+    "location": "Hub",
+    "x": -73.0,
+    "y": 70.0,
+    "z": -55.0
+  },
+  {
+    "name": "Bazaar",
+    "location": "Hub",
+    "x": -32.0,
+    "y": 71.0,
+    "z": -76.0
+  },
+  {
+    "name": "Bazaar Agent",
+    "location": "Hub",
+    "x": -39.0,
+    "y": 70.0,
+    "z": -78.0
+  },
+  {
+    "name": "Bea",
+    "location": "Hub",
+    "x": 30.0,
+    "y": 70.0,
+    "z": -91.0
+  },
+  {
+    "name": "Bingo",
+    "location": "Hub",
+    "x": 2.0,
+    "y": 70.0,
+    "z": -92.0
+  },
+  {
+    "name": "Alixer",
+    "location": "Hub",
+    "x": 0.0,
+    "y": 70.0,
+    "z": -93.0
+  },
+  {
+    "name": "Blacksmith",
+    "location": "Hub",
+    "x": -28.0,
+    "y": 69.0,
+    "z": -125.0
+  },
+  {
+    "name": "Builder",
+    "location": "Hub",
+    "x": -51.0,
+    "y": 71.0,
+    "z": -27.0
+  },
+  {
+    "name": "Wool Weaver",
+    "location": "Hub",
+    "x": -48.0,
+    "y": 74.0,
+    "z": -30.0
+  },
+  {
+    "name": "Carpenter",
+    "location": "Hub",
+    "x": -30.0,
+    "y": 70.0,
+    "z": -43.0
+  },
+  {
+    "name": "Curator",
+    "location": "Hub",
+    "x": -62.0,
+    "y": 77.0,
+    "z": 84.0
+  },
+  {
+    "name": "Dusk",
+    "location": "Hub",
+    "x": -37.0,
+    "y": 68.0,
+    "z": -125.0
+  },
+  {
+    "name": "Elizabeth",
+    "location": "Hub",
+    "x": 0.0,
+    "y": 71.0,
+    "z": -101.0
+  },
+  {
+    "name": "Seraphine",
+    "location": "Hub",
+    "x": 11.0,
+    "y": 71.0,
+    "z": -100.0
+  },
+  {
+    "name": "Farmer",
+    "location": "Hub",
+    "x": 44.0,
+    "y": 72.0,
+    "z": -162.0
+  },
+  {
+    "name": "Farm Merchant",
+    "location": "Hub",
+    "x": 15.0,
+    "y": 70.0,
+    "z": -71.0
+  },
+  {
+    "name": "Fear Mongerer",
+    "location": "Hub",
+    "x": -2.0,
+    "y": 70.0,
+    "z": -43.0
+  },
+  {
+    "name": "Fisherman",
+    "location": "Hub",
+    "x": 155.0,
+    "y": 68.0,
+    "z": 47.0
+  },
+  {
+    "name": "Fishing Merchant",
+    "location": "Hub",
+    "x": 52.0,
+    "y": 70.0,
+    "z": -82.0
+  },
+  {
+    "name": "George",
+    "location": "Hub",
+    "x": 32.0,
+    "y": 77.0,
+    "z": -93.0
+  },
+  {
+    "name": "Guy",
+    "location": "Hub",
+    "x": 51.0,
+    "y": 79.0,
+    "z": -13.0
+  },
+  {
+    "name": "Hub Selector",
+    "location": "Hub",
+    "x": -9.0,
+    "y": 70.0,
+    "z": -67.0
+  },
+  {
+    "name": "Jacob",
+    "location": "Hub",
+    "x": 23.0,
+    "y": 71.0,
+    "z": -69.0
+  },
+  {
+    "name": "Kat",
+    "location": "Hub",
+    "x": 34.0,
+    "y": 71.0,
+    "z": -101.0
+  },
+  {
+    "name": "Librarian",
+    "location": "Hub",
+    "x": -35.0,
+    "y": 69.0,
+    "z": -112.0
+  },
+  {
+    "name": "Lonely Philosopher",
+    "location": "Hub",
+    "x": -250.0,
+    "y": 130.0,
+    "z": 41.0
+  },
+  {
+    "name": "Lumberjack",
+    "location": "Hub",
+    "x": -113.0,
+    "y": 74.0,
+    "z": -37.0
+  },
+  {
+    "name": "Lumber Merchant",
+    "location": "Hub",
+    "x": -49.0,
+    "y": 70.0,
+    "z": -68.0
+  },
+  {
+    "name": "Maddox the Slayer",
+    "location": "Hub",
+    "x": -75.0,
+    "y": 66.0,
+    "z": -55.0
+  },
+  {
+    "name": "Marco",
+    "location": "Hub",
+    "x": -9.0,
+    "y": 71.0,
+    "z": -13.0
+  },
+  {
+    "name": "Maxwell",
+    "location": "Hub",
+    "x": 46.0,
+    "y": 69.0,
+    "z": -33.0
+  },
+  {
+    "name": "Jacobus",
+    "location": "Hub",
+    "x": 51.0,
+    "y": 69.0,
+    "z": -44.0
+  },
+  {
+    "name": "Ozanne",
+    "location": "Hub",
+    "x": 51.0,
+    "y": 69.0,
+    "z": -44.0
+  },
+  {
+    "name": "Mine Merchant",
+    "location": "Hub",
+    "x": -9.0,
+    "y": 70.0,
+    "z": -124.0
+  },
+  {
+    "name": "Pat",
+    "location": "Hub",
+    "x": -134.0,
+    "y": 73.0,
+    "z": -97.0
+  },
+  {
+    "name": "Plumber Joe",
+    "location": "Hub",
+    "x": 56.0,
+    "y": 70.0,
+    "z": -78.0
+  },
+  {
+    "name": "Rosetta",
+    "location": "Hub",
+    "x": -12.0,
+    "y": 68.0,
+    "z": -141.0
+  },
+  {
+    "name": "Salesman",
+    "location": "Hub",
+    "x": -13.0,
+    "y": 70.0,
+    "z": -42.0
+  },
+  {
+    "name": "Scoop",
+    "location": "Hub",
+    "x": 4.0,
+    "y": 181.0,
+    "z": 26.0
+  },
+  {
+    "name": "Security Sloth",
+    "location": "Hub",
+    "x": 2.0,
+    "y": 70.0,
+    "z": -75.0
+  },
+  {
+    "name": "Seymour",
+    "location": "Hub",
+    "x": 24.0,
+    "y": 64.0,
+    "z": -41.0
+  },
+  {
+    "name": "Sirius",
+    "location": "Hub",
+    "x": 91.0,
+    "y": 75.0,
+    "z": 176.0
+  },
+  {
+    "name": "Shifty",
+    "location": "Hub",
+    "x": 114.0,
+    "y": 73.0,
+    "z": 175.0
+  },
+  {
+    "name": "Lucius",
+    "location": "Hub",
+    "x": 125.0,
+    "y": 73.0,
+    "z": 165.0
+  },
+  {
+    "name": "Taylor",
+    "location": "Hub",
+    "x": 27.0,
+    "y": 71.0,
+    "z": -43.0
+  },
+  {
+    "name": "Tia the Fairy",
+    "location": "Hub",
+    "x": 129.0,
+    "y": 66.0,
+    "z": 137.0
+  },
+  {
+    "name": "Weaponsmith",
+    "location": "Hub",
+    "x": -9.0,
+    "y": 68.0,
+    "z": -140.0
+  },
+  {
+    "name": "Wizard",
+    "location": "Hub",
+    "x": 46.0,
+    "y": 122.0,
+    "z": 75.0
+  },
+  {
+    "name": "Barry",
+    "location": "Hub",
+    "x": 41.0,
+    "y": 122.0,
+    "z": 69.0
+  },
+  {
+    "name": "Elise",
+    "location": "Hub",
+    "x": 43.0,
+    "y": 82.0,
+    "z": 68.0
+  },
+  {
+    "name": "Nicole",
+    "location": "Hub",
+    "x": 40.0,
+    "y": 90.0,
+    "z": 72.0
+  },
+  {
+    "name": "Zog",
+    "location": "Hub",
+    "x": 33.0,
+    "y": 70.0,
+    "z": -96.0
+  },
+  {
+    "name": "Oringo",
+    "location": "Hub",
+    "x": -3.0,
+    "y": 70.0,
+    "z": -43.0
+  },
+  {
+    "name": "Arthur",
+    "location": "Hub",
+    "x": 51.0,
+    "y": 71.0,
+    "z": -136.0
+  },
+  {
+    "name": "Maths Enjoyer",
+    "location": "Hub",
+    "x": 56.0,
+    "y": 69.0,
+    "z": -40.0
+  },
+  {
+    "name": "Biblio",
+    "location": "Hub",
+    "x": 8.0,
+    "y": 71.0,
+    "z": -95.0
+  },
+  {
+    "name": "Madame Eleanor Q. Goldsworth III",
+    "location": "Hub",
+    "x": -49.0,
+    "y": 77.0,
+    "z": 75.0
+  },
+  {
+    "name": "Farmhand",
+    "location": "The Barn",
+    "x": 144.0,
+    "y": 73.0,
+    "z": -240.0
+  },
+  {
+    "name": "Windmill Operator",
+    "location": "The Barn",
+    "x": 98.0,
+    "y": 89.0,
+    "z": -283.0
+  },
+  {
+    "name": "Beth",
+    "location": "Mushroom Desert",
+    "x": 163.0,
+    "y": 77.0,
+    "z": -359.0
+  },
+  {
+    "name": "Mason",
+    "location": "Mushroom Desert",
+    "x": 177.0,
+    "y": 77.0,
+    "z": -356.0
+  },
+  {
+    "name": "Friendly Hiker",
+    "location": "Mushroom Desert",
+    "x": 181.0,
+    "y": 77.0,
+    "z": -381.0
+  },
+  {
+    "name": "Hungry Hiker",
+    "location": "Mushroom Desert",
+    "x": 269.0,
+    "y": 48.0,
+    "z": -480.0
+  },
+  {
+    "name": "Treasure Hunter",
+    "location": "Mushroom Desert",
+    "x": 200.0,
+    "y": 92.0,
+    "z": -436.0
+  },
+  {
+    "name": "Shepherd",
+    "location": "Mushroom Desert",
+    "x": 388.0,
+    "y": 85.0,
+    "z": -372.0
+  },
+  {
+    "name": "Jake",
+    "location": "Mushroom Desert",
+    "x": 261.0,
+    "y": 184.0,
+    "z": -565.0
+  },
+  {
+    "name": "Gold Forger",
+    "location": "Gold Mine",
+    "x": 27.0,
+    "y": 74.0,
+    "z": -294.0
+  },
+  {
+    "name": "Iron Forger",
+    "location": "Gold Mine",
+    "x": -1.0,
+    "y": 75.0,
+    "z": -307.0
+  },
+  {
+    "name": "Rusty",
+    "location": "Gold Mine",
+    "x": -19.0,
+    "y": 78.0,
+    "z": -325.0
+  },
+  {
+    "name": "Lazy Miner",
+    "location": "Gold Mine",
+    "x": -11.0,
+    "y": 78.0,
+    "z": -337.0
+  },
+  {
+    "name": "Walter",
+    "location": "Deep Caverns",
+    "x": 19.0,
+    "y": 156.0,
+    "z": -35.0
+  },
+  {
+    "name": "Lapis Miner",
+    "location": "Deep Caverns",
+    "x": -55.0,
+    "y": 121.0,
+    "z": 41.0
+  },
+  {
+    "name": "Redstone Miner",
+    "location": "Deep Caverns",
+    "x": 25.0,
+    "y": 104.0,
+    "z": 16.0
+  },
+  {
+    "name": "Rhys",
+    "location": "Deep Caverns",
+    "x": 31.0,
+    "y": 12.0,
+    "z": 14.0
+  },
+  {
+    "name": "Lift Operator (Gunpowder Mines)",
+    "location": "Deep Caverns",
+    "x": 45.0,
+    "y": 150.0,
+    "z": 15.0
+  },
+  {
+    "name": "Lift Operator (Lapis Quarry)",
+    "location": "Deep Caverns",
+    "x": 45.0,
+    "y": 121.0,
+    "z": 15.0
+  },
+  {
+    "name": "Lift Operator (Pigmen's Den)",
+    "location": "Deep Caverns",
+    "x": 45.0,
+    "y": 101.0,
+    "z": 15.0
+  },
+  {
+    "name": "Lift Operator (Slimehill)",
+    "location": "Deep Caverns",
+    "x": 45.0,
+    "y": 66.0,
+    "z": 15.0
+  },
+  {
+    "name": "Lift Operator (Diamond Reserve)",
+    "location": "Deep Caverns",
+    "x": 45.0,
+    "y": 38.0,
+    "z": 15.0
+  },
+  {
+    "name": "Lift Operator (Obsidian Sanctuary)",
+    "location": "Deep Caverns",
+    "x": 45.0,
+    "y": 13.0,
+    "z": 15.0
+  },
+  {
+    "name": "Haymitch",
+    "location": "Spider's Den",
+    "x": -202.0,
+    "y": 84.0,
+    "z": -240.0
+  },
+  {
+    "name": "Rick",
+    "location": "Spider's Den",
+    "x": -330.0,
+    "y": 70.0,
+    "z": -235.0
+  },
+  {
+    "name": "Guber",
+    "location": "The End",
+    "x": -495.0,
+    "y": 121.0,
+    "z": -242.0
+  },
+  {
+    "name": "Pearl Dealer",
+    "location": "The End",
+    "x": -504.0,
+    "y": 101.0,
+    "z": -284.0
+  },
+  {
+    "name": "Gregory",
+    "location": "The End",
+    "x": -607.0,
+    "y": 22.0,
+    "z": -284.0
+  },
+  {
+    "name": "Charlie",
+    "location": "The Park",
+    "x": -285.0,
+    "y": 82.0,
+    "z": -16.0
+  },
+  {
+    "name": "Vanessa",
+    "location": "The Park",
+    "x": -311.0,
+    "y": 83.0,
+    "z": -70.0
+  },
+  {
+    "name": "Gustave",
+    "location": "The Park",
+    "x": -385.0,
+    "y": 89.0,
+    "z": 55.0
+  },
+  {
+    "name": "Melancholic Viking",
+    "location": "The Park",
+    "x": -359.0,
+    "y": 91.0,
+    "z": 76.0
+  },
+  {
+    "name": "Ryan",
+    "location": "The Park",
+    "x": -330.0,
+    "y": 103.0,
+    "z": -103.0
+  },
+  {
+    "name": "Melody",
+    "location": "The Park",
+    "x": -398.0,
+    "y": 110.0,
+    "z": 34.0
+  },
+  {
+    "name": "Master Tactician Funk",
+    "location": "The Park",
+    "x": -462.0,
+    "y": 110.0,
+    "z": -15.0
+  },
+  {
+    "name": "Juliette",
+    "location": "The Park",
+    "x": -476.0,
+    "y": 134.0,
+    "z": -116.0
+  },
+  {
+    "name": "Old Shaman Nyko",
+    "location": "The Park",
+    "x": -379.0,
+    "y": 60.0,
+    "z": 36.0
+  },
+  {
+    "name": "Rhys (Dwarven)",
+    "location": "Dwarven Mines",
+    "x": -37.0,
+    "y": 200.0,
+    "z": -117.0
+  },
+  {
+    "name": "Bulvar",
+    "location": "Dwarven Mines",
+    "x": -15.0,
+    "y": 201.0,
+    "z": -98.0
+  },
+  {
+    "name": "Bubu",
+    "location": "Dwarven Mines",
+    "x": -10.0,
+    "y": 201.0,
+    "z": -103.0
+  },
+  {
+    "name": "Blacksmith (Dwarven)",
+    "location": "Dwarven Mines",
+    "x": -6.0,
+    "y": 201.0,
+    "z": -154.0
+  },
+  {
+    "name": "Old Man Garry",
+    "location": "Dwarven Mines",
+    "x": 5.0,
+    "y": 200.0,
+    "z": -109.0
+  },
+  {
+    "name": "Banker Broadjaw",
+    "location": "Dwarven Mines",
+    "x": 13.0,
+    "y": 201.0,
+    "z": -148.0
+  },
+  {
+    "name": "Bednom",
+    "location": "Dwarven Mines",
+    "x": -30.0,
+    "y": 214.0,
+    "z": -89.0
+  },
+  {
+    "name": "Tarwen",
+    "location": "Dwarven Mines",
+    "x": 34.0,
+    "y": 202.0,
+    "z": -141.0
+  },
+  {
+    "name": "Hornum",
+    "location": "Dwarven Mines",
+    "x": 35.0,
+    "y": 202.0,
+    "z": -146.0
+  },
+  {
+    "name": "Gimley",
+    "location": "Dwarven Mines",
+    "x": 28.0,
+    "y": 202.0,
+    "z": -149.0
+  },
+  {
+    "name": "Sargwyn",
+    "location": "Dwarven Mines",
+    "x": 35.0,
+    "y": 202.0,
+    "z": -150.0
+  },
+  {
+    "name": "Fetchur",
+    "location": "Dwarven Mines",
+    "x": 84.0,
+    "y": 224.0,
+    "z": -117.0
+  },
+  {
+    "name": "Gwendolyn",
+    "location": "Dwarven Mines",
+    "x": 88.0,
+    "y": 198.0,
+    "z": -98.0
+  },
+  {
+    "name": "Geo",
+    "location": "Dwarven Mines",
+    "x": 87.0,
+    "y": 199.0,
+    "z": -115.0
+  },
+  {
+    "name": "Lumina",
+    "location": "Dwarven Mines",
+    "x": 77.0,
+    "y": 199.0,
+    "z": -110.0
+  },
+  {
+    "name": "Fragilis",
+    "location": "Dwarven Mines",
+    "x": 88.0,
+    "y": 199.0,
+    "z": -108.0
+  },
+  {
+    "name": "Station Master",
+    "location": "Dwarven Mines",
+    "x": 38.0,
+    "y": 201.0,
+    "z": -87.0
+  },
+  {
+    "name": "Dirt Guy",
+    "location": "Dwarven Mines",
+    "x": 43.0,
+    "y": 108.0,
+    "z": 174.0
+  },
+  {
+    "name": "Dalbrek",
+    "location": "Dwarven Mines",
+    "x": 191.0,
+    "y": 216.0,
+    "z": 153.0
+  },
+  {
+    "name": "Puzzler",
+    "location": "Dwarven Mines",
+    "x": 181.0,
+    "y": 196.0,
+    "z": 135.0
+  },
+  {
+    "name": "Tal Ker",
+    "location": "Dwarven Mines",
+    "x": 192.0,
+    "y": 196.0,
+    "z": 104.0
+  },
+  {
+    "name": "Bylma",
+    "location": "Dwarven Mines",
+    "x": -9.0,
+    "y": 128.0,
+    "z": 59.0
+  },
+  {
+    "name": "Emissary Carlton",
+    "location": "Dwarven Mines",
+    "x": -72.0,
+    "y": 153.0,
+    "z": -10.0
+  },
+  {
+    "name": "Emissary Ceanna",
+    "location": "Dwarven Mines",
+    "x": 42.0,
+    "y": 134.0,
+    "z": 22.0
+  },
+  {
+    "name": "Emissary Wilson",
+    "location": "Dwarven Mines",
+    "x": 171.0,
+    "y": 150.0,
+    "z": 31.0
+  },
+  {
+    "name": "Emissary Lilith",
+    "location": "Dwarven Mines",
+    "x": 58.0,
+    "y": 198.0,
+    "z": -8.0
+  },
+  {
+    "name": "Emissary Fraiser",
+    "location": "Dwarven Mines",
+    "x": -132.0,
+    "y": 174.0,
+    "z": -50.0
+  },
+  {
+    "name": "Emissary Eliza",
+    "location": "Dwarven Mines",
+    "x": -37.0,
+    "y": 200.0,
+    "z": -131.0
+  },
+  {
+    "name": "Emissary Braum",
+    "location": "Dwarven Mines",
+    "x": 89.0,
+    "y": 198.0,
+    "z": -92.0
+  },
+  {
+    "name": "Silnar",
+    "location": "Dwarven Mines",
+    "x": 53.0,
+    "y": 141.0,
+    "z": 19.0
+  },
+  {
+    "name": "Fred",
+    "location": "Dwarven Mines",
+    "x": -2.5,
+    "y": 148.0,
+    "z": -68.5
+  },
+  {
+    "name": "Jotraeline Greatforge",
+    "location": "Dwarven Mines",
+    "x": -6.0,
+    "y": 145.0,
+    "z": -18.0
+  },
+  {
+    "name": "Dulin",
+    "location": "Dwarven Mines",
+    "x": 79.0,
+    "y": 187.0,
+    "z": 128.0
+  },
+  {
+    "name": "Cold Enjoyer",
+    "location": "Dwarven Mines",
+    "x": -15.0,
+    "y": 137.0,
+    "z": 217.0
+  },
+  {
+    "name": "Sor'Hen",
+    "location": "Dwarven Mines",
+    "x": 0.5,
+    "y": 121.0,
+    "z": 225.5
+  },
+  {
+    "name": "Scardius",
+    "location": "Dwarven Mines",
+    "x": -16.0,
+    "y": 121.0,
+    "z": 232.0
+  },
+  {
+    "name": "Plinius",
+    "location": "Dwarven Mines",
+    "x": 10.0,
+    "y": 121.0,
+    "z": 245.0
+  },
+  {
+    "name": "Emissary Lissandra",
+    "location": "Dwarven Mines",
+    "x": 2.0,
+    "y": 121.0,
+    "z": 237.0
+  },
+  {
+    "name": "Dr. Stone",
+    "location": "Dwarven Mines",
+    "x": 28.0,
+    "y": 120.0,
+    "z": 238.0
+  },
+  {
+    "name": "Tornora",
+    "location": "Dwarven Mines",
+    "x": 135.0,
+    "y": 196.0,
+    "z": 166.0
+  },
+  {
+    "name": "Queen Mismyla",
+    "location": "Dwarven Mines",
+    "x": 126.0,
+    "y": 195.0,
+    "z": 195.0
+  },
+  {
+    "name": "Geonathan Greatforge",
+    "location": "Crystal Hollows",
+    "x": 530.0,
+    "y": 106.0,
+    "z": 556.0
+  },
+  {
+    "name": "Emissary Sisko",
+    "location": "Crystal Hollows",
+    "x": 495.0,
+    "y": 106.0,
+    "z": 556.0
+  },
+  {
+    "name": "Gemma",
+    "location": "Crystal Hollows",
+    "x": 475.0,
+    "y": 106.0,
+    "z": 513.0
+  },
+  {
+    "name": "Elle",
+    "location": "Crimson Isle",
+    "x": -311.0,
+    "y": 96.0,
+    "z": -405.0
+  },
+  {
+    "name": "Dean",
+    "location": "Crimson Isle",
+    "x": -37.0,
+    "y": 114.0,
+    "z": -883.0
+  },
+  {
+    "name": "Queen Nyx",
+    "location": "Crimson Isle",
+    "x": -124.0,
+    "y": 103.0,
+    "z": -754.0
+  },
+  {
+    "name": "Chief Scorn",
+    "location": "Crimson Isle",
+    "x": -585.0,
+    "y": 115.0,
+    "z": -687.0
+  },
+  {
+    "name": "Master Tao",
+    "location": "Crimson Isle",
+    "x": -235.0,
+    "y": 108.0,
+    "z": -597.0
+  },
+  {
+    "name": "Odger",
+    "location": "Crimson Isle",
+    "x": -373.0,
+    "y": 206.0,
+    "z": -801.0
+  },
+  {
+    "name": "Kuudra Gatekeeper",
+    "location": "Crimson Isle",
+    "x": -372.0,
+    "y": 117.0,
+    "z": -991.0
+  },
+  {
+    "name": "Aura",
+    "location": "Crimson Isle",
+    "x": -395.0,
+    "y": 69.0,
+    "z": -882.0
+  },
+  {
+    "name": "Alchemage",
+    "location": "Crimson Isle",
+    "x": -79.0,
+    "y": 107.0,
+    "z": -775.0
+  },
+  {
+    "name": "Selenar",
+    "location": "Crimson Isle",
+    "x": -69.0,
+    "y": 107.0,
+    "z": -757.0
+  },
+  {
+    "name": "Offea",
+    "location": "Crimson Isle",
+    "x": -86.0,
+    "y": 92.0,
+    "z": -734.0
+  },
+  {
+    "name": "Alwin",
+    "location": "Crimson Isle",
+    "x": -86.0,
+    "y": 92.0,
+    "z": -734.0
+  },
+  {
+    "name": "Grelius",
+    "location": "Crimson Isle",
+    "x": -131.5,
+    "y": 101.0,
+    "z": -755.5
+  },
+  {
+    "name": "Krevius",
+    "location": "Crimson Isle",
+    "x": -131.5,
+    "y": 101.0,
+    "z": -755.5
+  },
+  {
+    "name": "Hilda",
+    "location": "Crimson Isle",
+    "x": -48.0,
+    "y": 107.0,
+    "z": -783.0
+  },
+  {
+    "name": "Igor",
+    "location": "Crimson Isle",
+    "x": -550.0,
+    "y": 98.0,
+    "z": -705.0
+  },
+  {
+    "name": "Marthos",
+    "location": "Crimson Isle",
+    "x": -640.0,
+    "y": 101.0,
+    "z": -825.0
+  },
+  {
+    "name": "Deng",
+    "location": "Crimson Isle",
+    "x": -686.5,
+    "y": 102.0,
+    "z": -763.0
+  },
+  {
+    "name": "Igrupan",
+    "location": "Crimson Isle",
+    "x": -23.0,
+    "y": 92.0,
+    "z": -816.0
+  },
+  {
+    "name": "Malik",
+    "location": "Dungeon Hub",
+    "x": -80.0,
+    "y": 56.0,
+    "z": -119.0
+  },
+  {
+    "name": "Mort",
+    "location": "Dungeon Hub",
+    "x": -88.0,
+    "y": 55.0,
+    "z": -128.0
+  },
+  {
+    "name": "Ophelia",
+    "location": "Dungeon Hub",
+    "x": -85.0,
+    "y": 55.0,
+    "z": -139.0
+  },
+  {
+    "name": "Gulliver",
+    "location": "Jerry's Workshop",
+    "x": 69.0,
+    "y": 105.0,
+    "z": 33.0
+  },
+  {
+    "name": "Anita",
+    "location": "Hub",
+    "x": 22.0,
+    "y": 77.0,
+    "z": -69.0
+  },
+  {
+    "name": "Oringo the Traveling Zookeeper",
+    "location": "Hub",
+    "x": -3.0,
+    "y": 70.0,
+    "z": -43.0
+  },
+  {
+    "name": "Hunter Ava",
+    "location": "Mushroom Desert",
+    "x": 319.0,
+    "y": 102.0,
+    "z": -470.0
+  },
+  {
+    "name": "Tammy",
+    "location": "Mushroom Desert",
+    "x": 284.0,
+    "y": 104.0,
+    "z": -545.0
+  },
+  {
+    "name": "Tony",
+    "location": "Mushroom Desert",
+    "x": 278.0,
+    "y": 104.0,
+    "z": -544.0
+  },
+  {
+    "name": "Trevor",
+    "location": "Mushroom Desert",
+    "x": 281.0,
+    "y": 104.0,
+    "z": -543.0
+  },
+  {
+    "name": "Grandma Wolf",
+    "location": "Spider's Den",
+    "x": -282.0,
+    "y": 121.0,
+    "z": -191.0
+  },
+  {
+    "name": "Shaggy",
+    "location": "Spider's Den",
+    "x": -278.0,
+    "y": 121.0,
+    "z": -182.0
+  },
+  {
+    "name": "Bramass Beastslayer",
+    "location": "Spider's Den",
+    "x": -271.0,
+    "y": 113.0,
+    "z": -196.0
+  },
+  {
+    "name": "Archaeologist",
+    "location": "Spider's Den",
+    "x": -360.0,
+    "y": 111.0,
+    "z": -290.0
+  },
+  {
+    "name": "Spider Tamer",
+    "location": "Spider's Den",
+    "x": 62.0,
+    "y": -194.0,
+    "z": -298.0
+  },
+  {
+    "name": "Lone Adventurer",
+    "location": "The End",
+    "x": -524.0,
+    "y": 101.0,
+    "z": -275.0
+  },
+  {
+    "name": "Tyzzo",
+    "location": "The End",
+    "x": -597.0,
+    "y": 5.0,
+    "z": -272.0
+  },
+  {
+    "name": "Guildford",
+    "location": "Dungeon Hub",
+    "x": -18.0,
+    "y": 86.0,
+    "z": 4.0
+  },
+  {
+    "name": "St. Jerry",
+    "location": "Jerry's Workshop",
+    "x": -22.0,
+    "y": 76.0,
+    "z": 92.0
+  },
+  {
+    "name": "Sherry",
+    "location": "Jerry's Workshop",
+    "x": 9.0,
+    "y": 76.0,
+    "z": 99.0
+  },
+  {
+    "name": "Frosty",
+    "location": "Jerry's Workshop",
+    "x": -1.0,
+    "y": 76.0,
+    "z": 92.0
+  },
+  {
+    "name": "Gary",
+    "location": "Jerry's Workshop",
+    "x": 53.0,
+    "y": 103.0,
+    "z": 56.0
+  },
+  {
+    "name": "Terry",
+    "location": "Jerry's Workshop",
+    "x": -92.0,
+    "y": 78.0,
+    "z": 25.0
+  },
+  {
+    "name": "Banker Barry",
+    "location": "Jerry's Workshop",
+    "x": 20.0,
+    "y": 77.0,
+    "z": 44.0
+  },
+  {
+    "name": "Frozen Alex",
+    "location": "Jerry's Workshop",
+    "x": -64.0,
+    "y": 81.0,
+    "z": -13.0
+  },
+  {
+    "name": "Einary",
+    "location": "Jerry's Workshop",
+    "x": -14.5,
+    "y": 76.0,
+    "z": 63.5
+  },
+  {
+    "name": "Alatar",
+    "location": "Rift Dimension",
+    "x": -46.0,
+    "y": 116.0,
+    "z": 70.0
+  },
+  {
+    "name": "Wizardman",
+    "location": "Rift Dimension",
+    "x": -45.0,
+    "y": 90.0,
+    "z": 70.0
+  },
+  {
+    "name": "Argofay Bughunter",
+    "location": "Rift Dimension",
+    "x": -85.0,
+    "y": 108.0,
+    "z": 97.0
+  },
+  {
+    "name": "Argofay Bugshopper",
+    "location": "Rift Dimension",
+    "x": -95.0,
+    "y": 110.0,
+    "z": 95.0
+  },
+  {
+    "name": "Argofay Serialbather",
+    "location": "Rift Dimension",
+    "x": -139.0,
+    "y": 119.0,
+    "z": 115.0
+  },
+  {
+    "name": "Argofay Sonfather",
+    "location": "Rift Dimension",
+    "x": -96.0,
+    "y": 100.0,
+    "z": 156.0
+  },
+  {
+    "name": "Argofay Trafficker",
+    "location": "Rift Dimension",
+    "x": -92.0,
+    "y": 90.0,
+    "z": 106.0
+  },
+  {
+    "name": "Argofay Trailblazer",
+    "location": "Rift Dimension",
+    "x": -97.0,
+    "y": 66.0,
+    "z": 147.0
+  },
+  {
+    "name": "Argofay Treemerger",
+    "location": "Rift Dimension",
+    "x": -144.0,
+    "y": 93.0,
+    "z": 139.0
+  },
+  {
+    "name": "Argofay Tencounter",
+    "location": "Rift Dimension",
+    "x": -93.0,
+    "y": 100.0,
+    "z": 95.0
+  },
+  {
+    "name": "Hound",
+    "location": "Rift Dimension",
+    "x": -69.0,
+    "y": 66.0,
+    "z": 147.0
+  },
+  {
+    "name": "Inverted Sirius",
+    "location": "Rift Dimension",
+    "x": -96.0,
+    "y": 75.0,
+    "z": 190.0
+  },
+  {
+    "name": "Jacquelle",
+    "location": "Rift Dimension",
+    "x": -122.0,
+    "y": 120.0,
+    "z": 137.0
+  },
+  {
+    "name": "Kiermet",
+    "location": "Rift Dimension",
+    "x": -135.0,
+    "y": 67.0,
+    "z": 158.0
+  },
+  {
+    "name": "Ribbit",
+    "location": "Rift Dimension",
+    "x": -137.0,
+    "y": 67.0,
+    "z": 159.0
+  },
+  {
+    "name": "Tel Kar",
+    "location": "Rift Dimension",
+    "x": -113.0,
+    "y": 69.0,
+    "z": 62.0
+  },
+  {
+    "name": "Porhtal",
+    "location": "Rift Dimension",
+    "x": -158.0,
+    "y": 70.5,
+    "z": 162.0
+  },
+  {
+    "name": "Unbound Explorer",
+    "location": "Rift Dimension",
+    "x": -29.0,
+    "y": 72.0,
+    "z": 316.0
+  },
+  {
+    "name": "Dr. Edwin",
+    "location": "Rift Dimension",
+    "x": -80.0,
+    "y": 73.0,
+    "z": 10.0
+  },
+  {
+    "name": "Dr. Phear",
+    "location": "Rift Dimension",
+    "x": -146.0,
+    "y": 36.0,
+    "z": 27.0
+  },
+  {
+    "name": "Mushroom Guy",
+    "location": "Rift Dimension",
+    "x": -178.0,
+    "y": 75.0,
+    "z": 12.5
+  },
+  {
+    "name": "Kay",
+    "location": "Rift Dimension",
+    "x": -191.0,
+    "y": 68.0,
+    "z": 59.0
+  },
+  {
+    "name": "Reed",
+    "location": "Rift Dimension",
+    "x": -212.0,
+    "y": 72.0,
+    "z": 60.0
+  },
+  {
+    "name": "Roy",
+    "location": "Rift Dimension",
+    "x": -205.0,
+    "y": 75.0,
+    "z": 49.0
+  },
+  {
+    "name": "Alchemist (Rift)",
+    "location": "Rift Dimension",
+    "x": -50.0,
+    "y": 70.0,
+    "z": -66.0
+  },
+  {
+    "name": "Chef",
+    "location": "Rift Dimension",
+    "x": -103.0,
+    "y": 72.0,
+    "z": -104.0
+  },
+  {
+    "name": "Cosmo",
+    "location": "Rift Dimension",
+    "x": -67.0,
+    "y": 70.0,
+    "z": -92.0
+  },
+  {
+    "name": "Finplex",
+    "location": "Rift Dimension",
+    "x": -57.0,
+    "y": 68.0,
+    "z": -82.0
+  },
+  {
+    "name": "Grandma (Rift)",
+    "location": "Rift Dimension",
+    "x": -71.0,
+    "y": 65.0,
+    "z": -60.0
+  },
+  {
+    "name": "Gunther",
+    "location": "Rift Dimension",
+    "x": -69.0,
+    "y": 71.0,
+    "z": -62.0
+  },
+  {
+    "name": "Joey McPizza",
+    "location": "Rift Dimension",
+    "x": -106.0,
+    "y": 72.0,
+    "z": -103.0
+  },
+  {
+    "name": "Plumber Joe (Rift)",
+    "location": "Rift Dimension",
+    "x": -62.0,
+    "y": 70.0,
+    "z": -78.0
+  },
+  {
+    "name": "Skylark",
+    "location": "Rift Dimension",
+    "x": -72.0,
+    "y": 71.0,
+    "z": -115.0
+  },
+  {
+    "name": "Sorcerer Okron",
+    "location": "Rift Dimension",
+    "x": -71.0,
+    "y": 81.0,
+    "z": -111.0
+  },
+  {
+    "name": "Unhinged Kloon",
+    "location": "Rift Dimension",
+    "x": -56.0,
+    "y": 79.0,
+    "z": -13.0
+  },
+  {
+    "name": "Yoshua",
+    "location": "Rift Dimension",
+    "x": -69.0,
+    "y": 71.0,
+    "z": -118.0
+  },
+  {
+    "name": "Disinfestor",
+    "location": "Rift Dimension",
+    "x": -38.0,
+    "y": 71.0,
+    "z": -103.0
+  },
+  {
+    "name": "Kat (Rift)",
+    "location": "Rift Dimension",
+    "x": -62.0,
+    "y": 70.0,
+    "z": -78.0
+  },
+  {
+    "name": "Shania",
+    "location": "Rift Dimension",
+    "x": -48.0,
+    "y": 72.0,
+    "z": -161.0
+  },
+  {
+    "name": "Sick Farmer",
+    "location": "Rift Dimension",
+    "x": -43.0,
+    "y": 72.0,
+    "z": -160.0
+  },
+  {
+    "name": "Cowboy Nick",
+    "location": "Rift Dimension",
+    "x": -13.0,
+    "y": 70.0,
+    "z": -7.0
+  },
+  {
+    "name": "Cryptosis",
+    "location": "Rift Dimension",
+    "x": 28.0,
+    "y": 71.0,
+    "z": -77.0
+  },
+  {
+    "name": "Marcia",
+    "location": "Rift Dimension",
+    "x": 3.0,
+    "y": 71.0,
+    "z": -11.0
+  },
+  {
+    "name": "Nene",
+    "location": "Rift Dimension",
+    "x": 24.0,
+    "y": 88.5,
+    "z": -91.0
+  },
+  {
+    "name": "Roger",
+    "location": "Rift Dimension",
+    "x": -3.0,
+    "y": 70.0,
+    "z": -44.0
+  },
+  {
+    "name": "Detransfigured Seraphine",
+    "location": "Rift Dimension",
+    "x": -17.0,
+    "y": 71.0,
+    "z": -101.0
+  },
+  {
+    "name": "Barry (Rift)",
+    "location": "Rift Dimension",
+    "x": -46.0,
+    "y": 54.0,
+    "z": -143.0
+  },
+  {
+    "name": "Joliet",
+    "location": "Rift Dimension",
+    "x": -32.0,
+    "y": 64.5,
+    "z": -43.0
+  },
+  {
+    "name": "Seymour (Rift)",
+    "location": "Rift Dimension",
+    "x": -27.0,
+    "y": 71.0,
+    "z": -45.0
+  },
+  {
+    "name": "Taylor (Rift)",
+    "location": "Rift Dimension",
+    "x": -32.0,
+    "y": 71.0,
+    "z": -39.0
+  },
+  {
+    "name": "Ramero",
+    "location": "Rift Dimension",
+    "x": -49.0,
+    "y": 68.0,
+    "z": -39.0
+  },
+  {
+    "name": "Jerry (Rift)",
+    "location": "Rift Dimension",
+    "x": -86.0,
+    "y": 20.0,
+    "z": 4.5
+  },
+  {
+    "name": "Damia",
+    "location": "Rift Dimension",
+    "x": 31.0,
+    "y": 72.0,
+    "z": -95.0
+  },
+  {
+    "name": "Blacksmith (Rift)",
+    "location": "Rift Dimension",
+    "x": -2.0,
+    "y": 68.0,
+    "z": -142.0
+  },
+  {
+    "name": "Master Tactician Fink",
+    "location": "Rift Dimension",
+    "x": -191.0,
+    "y": 72.0,
+    "z": -57.0
+  },
+  {
+    "name": "Mole",
+    "location": "Rift Dimension",
+    "x": -160.0,
+    "y": 97.0,
+    "z": -76.0
+  },
+  {
+    "name": "Deer",
+    "location": "Rift Dimension",
+    "x": 139.0,
+    "y": 70.0,
+    "z": -12.0
+  },
+  {
+    "name": "Phaser",
+    "location": "Rift Dimension",
+    "x": 60.0,
+    "y": 70.0,
+    "z": -89.0
+  },
+  {
+    "name": "Maddox the Slayer (Rift)",
+    "location": "Rift Dimension",
+    "x": 205.0,
+    "y": 77.0,
+    "z": 45.0
+  }
+]

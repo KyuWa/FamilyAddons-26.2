@@ -1,0 +1,25 @@
+===== HOW TO BUILD SKYPRICES.JAR =====
+
+STEP 1 — Install Gradle (one time only)
+  Go to: https://gradle.org/releases/
+  Download: gradle-8.8-bin.zip
+  Extract to: C:\gradle
+  Add C:\gradle\bin to your system PATH
+    (Search "environment variables" → Edit system env vars → Path → New → C:\gradle\bin)
+
+STEP 2 — Open PowerShell in this folder
+  Hold Shift + right-click on the FamilyPrices folder → "Open PowerShell window here"
+
+STEP 3 — Build
+  Type: gradle build
+  Press Enter. First run downloads ~300MB, takes a few minutes.
+
+STEP 4 — Get the jar
+  Find it at: FamilyPrices\build\libs\FamilyPrices-1.0.0.jar
+  Copy it to your Modrinth mods folder.
+
+===== REQUIRED MODS (must already be installed) =====
+  - Fabric API
+  - Fabric Language Kotlin  (search on Modrinth)
+
+=======================================
