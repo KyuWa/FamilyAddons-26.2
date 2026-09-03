@@ -160,11 +160,13 @@ object EntityHighlight {
     fun getOutlineColor(entity: Entity): Int {
         val cfg = FamilyConfigManager.config.highlight
         if (!cfg.enabled) return 0
+        // Sparkling overrides the normal colors for both styles.
+        val sparklingSet = SparklingCritterHighlight.trackedEntities()
         if (cfg.drawingStyle == 1 && entity in highlighted) {
-            return parseOutlineColor(cfg.color)
+            return parseOutlineColor(if (entity in sparklingSet) cfg.sparklingColor else cfg.color)
         }
         if (bestiaryActive() && cfg.bestiaryDrawingStyle == 1 && entity in bestiaryHighlighted) {
-            return parseOutlineColor(cfg.bestiaryColor)
+            return parseOutlineColor(if (entity in sparklingSet) cfg.sparklingColor else cfg.bestiaryColor)
         }
         return 0
     }
@@ -226,6 +228,7 @@ object EntityHighlight {
         val config = FamilyConfigManager.config.highlight
         if (!config.enabled) return
         val shulkerTargets = ShulkerBoxHighlight.trackedEntities() + SparklingCritterHighlight.trackedEntities()
+        val sparklingSet = SparklingCritterHighlight.trackedEntities().toSet()
         if (highlighted.isEmpty() && bestiaryHighlighted.isEmpty() && shulkerTargets.isEmpty()) return
 
         fun parseRgb(s: String, fallback: Triple<Float, Float, Float>): Triple<Float, Float, Float> = try {
@@ -258,10 +261,10 @@ object EntityHighlight {
         }
 
         if (config.drawingStyle == 0 && highlighted.isNotEmpty()) {
-            drawBoxes(highlighted, Triple(r, g, b))
+            drawBoxes(highlighted - sparklingSet, Triple(r, g, b))
         }
         if (bestiaryActive() && config.bestiaryDrawingStyle == 0 && bestiaryHighlighted.isNotEmpty()) {
-            drawBoxes(bestiaryHighlighted, parseRgb(config.bestiaryColor, Triple(1f, 0.67f, 0f)))
+            drawBoxes(bestiaryHighlighted - sparklingSet, parseRgb(config.bestiaryColor, Triple(1f, 0.67f, 0f)))
         }
 
         // ── Tracer lines ──────────────────────────────────────────────

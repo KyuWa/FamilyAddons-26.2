@@ -38,11 +38,11 @@ object SparklingCritterHighlight {
     private const val PARTICLE_RADIUS = 1.75
     private const val MIN_BURSTS = 3
 
-    // Particle types that read as "sparkle". Refine with /fa critterdump data.
-    private val SPARKLE_TYPES = setOf(
-        "end_rod", "firework", "electric_spark", "happy_villager",
-        "enchant", "wax_on", "wax_off", "scrape", "totem_of_undying", "glow"
-    )
+    // Sparkling critters emit golden 4-point star particles — that's the
+    // vanilla "glow" sparkle (wax_on is the only other golden cross, kept as
+    // fallback). Narrowed from a broad guess set so green/teal/white sparkle
+    // types can't cause false positives.
+    private val SPARKLE_TYPES = setOf("glow", "wax_on")
 
     private data class Burst(val pos: Vec3, val at: Long)
 
