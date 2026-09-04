@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import org.kyowa.familyaddons.config.FamilyConfigManager
+import org.kyowa.familyaddons.features.AutoUpdater
 import org.kyowa.familyaddons.features.BestiaryZoneHighlight
 import org.kyowa.familyaddons.features.NpcLocations
 import org.kyowa.familyaddons.features.Parkour
@@ -30,6 +31,12 @@ object TestCommand {
                         openConfigNextTick = true
                         1
                     }
+
+                    // /fa update — manual update check, works for everyone
+                    .then(literal("update").executes {
+                        AutoUpdater.checkNow()
+                        1
+                    })
 
                     // /fa gui
                     .then(literal("gui").executes {

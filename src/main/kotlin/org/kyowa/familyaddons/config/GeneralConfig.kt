@@ -33,4 +33,9 @@ class GeneralConfig {
     @ConfigOption(name = "Auto Updater", desc = "Check for updates on launch and prompt to download them. Disable to skip update checks entirely.")
     @ConfigEditorBoolean
     var autoUpdaterEnabled = true
+
+    @Expose @JvmField
+    @ConfigOption(name = "Auto Download Updates", desc = "Keep checking GitHub every 10 minutes while you play and download new versions in the background, so the next restart already runs them. The launch prompt and chat notification stay as a fallback.")
+    @ConfigEditorBoolean
+    var autoDownloadUpdates = true
 }

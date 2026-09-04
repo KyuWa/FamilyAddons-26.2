@@ -3,6 +3,7 @@ package org.kyowa.familyaddons.features
 import com.google.gson.JsonParser
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.minecraft.client.Minecraft
@@ -55,9 +56,27 @@ object AutoUpdater {
     // after launch counts as a real connect.
     @Volatile private var freshConnect: Boolean = true
 
+    // ── Background re-check while playing ─────────────────────────────
+    // The launch-time check alone meant a release published mid-session was
+    // only discovered on the next launch, which then needed one more restart
+    // to actually load it. Re-poll GitHub every 10 minutes (well under the
+    // 60 req/h anonymous API limit) and, if enabled, download right away so
+    // the next restart already has the new jar.
+    private const val RECHECK_TICKS = 20 * 60 * 10
+    private var recheckTicker = 0
+    @Volatile private var checking = false
+    /** Version already auto-downloaded or announced, so repeated checks stay quiet. */
+    @Volatile private var handledVersion: String? = null
+
     fun register() {
         if (checked) return
         checked = true
+
+        // /faupdate (and /fa update) always exist so anyone can check manually,
+        // even with the automatic updater switched off.
+        ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
+            dispatcher.register(literal("faupdate").executes { checkNow(); 1 })
+        }
 
         // Respect the toggle — if disabled at startup, don't check or register the prompt listener.
         if (!FamilyConfigManager.config.general.autoUpdaterEnabled) {
@@ -65,7 +84,27 @@ object AutoUpdater {
             return
         }
 
-        CompletableFuture.runAsync { checkForUpdate() }
+        CompletableFuture.runAsync {
+            checkForUpdate()
+            handleCheckResult()
+        }
+
+        // Periodic re-check while the game is running.
+        ClientTickEvents.END_CLIENT_TICK.register {
+            if (!FamilyConfigManager.config.general.autoUpdaterEnabled) return@register
+            if (++recheckTicker < RECHECK_TICKS) return@register
+            recheckTicker = 0
+            if (checking || downloading) return@register
+            checking = true
+            CompletableFuture.runAsync {
+                try {
+                    checkForUpdate()
+                    handleCheckResult()
+                } finally {
+                    checking = false
+                }
+            }
+        }
 
         ScreenEvents.AFTER_INIT.register { _, screen, _, _ ->
             if (screen !is TitleScreen) return@register
@@ -73,20 +112,11 @@ object AutoUpdater {
             if (!FamilyConfigManager.config.general.autoUpdaterEnabled) return@register
             if (!updateAvailable) return@register
             if (downloaded) return@register
+            if (downloading) return@register  // background download in flight
             if (AutoUpdater.skipped) return@register
             Minecraft.getInstance().execute {
                 Minecraft.getInstance().gui.setScreen(UpdatePromptScreen(screen))
             }
-        }
-
-        // ── /faupdate client command — invoked by clicking the chat notification ──
-        ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
-            dispatcher.register(
-                literal("faupdate").executes {
-                    triggerDownloadFromChat()
-                    1
-                }
-            )
         }
 
         // ── Chat notification only on a fresh server connect ──
@@ -97,10 +127,18 @@ object AutoUpdater {
         ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
             if (!FamilyConfigManager.config.general.autoUpdaterEnabled) return@register
             if (!updateAvailable) return@register
-            if (downloaded) return@register   // already downloaded (e.g. via title-screen Yes)
-            if (downloading) return@register  // currently downloading (e.g. title-screen Yes in flight)
+            if (downloading) return@register  // currently downloading (title-screen Yes or background)
             if (!freshConnect) return@register
             freshConnect = false
+            if (downloaded) {
+                // Already on disk (title-screen Yes or background download):
+                // just remind once per connect that a restart applies it.
+                CompletableFuture.runAsync {
+                    Thread.sleep(1500)
+                    Minecraft.getInstance().execute { sendDownloadedReminder() }
+                }
+                return@register
+            }
             // Delay slightly so the notif appears AFTER Hypixel's join messages
             // (otherwise it gets buried under lobby spam).
             CompletableFuture.runAsync {
@@ -112,6 +150,88 @@ object AutoUpdater {
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
             freshConnect = true
         }
+    }
+
+    /**
+     * Manual check — /fa update, /faupdate, and the chat notification click.
+     * Always re-asks GitHub (the launch check may predate the release), then
+     * either reports "up to date", reminds that a download is waiting for a
+     * restart, or opens the Yes/No prompt.
+     */
+    fun checkNow() {
+        val mc = Minecraft.getInstance()
+        val player = mc.player
+        if (checking) {
+            player?.sendSystemMessage(Component.literal("§6[FA] §7Already checking for updates…"))
+            return
+        }
+        if (downloading) {
+            player?.sendSystemMessage(Component.literal("§6[FA] §7Already downloading an update…"))
+            return
+        }
+        player?.sendSystemMessage(Component.literal("§6[FA] §7Checking GitHub for updates…"))
+        checking = true
+        CompletableFuture.runAsync {
+            try {
+                val ok = checkForUpdate()
+                mc.execute {
+                    val p = mc.player
+                    when {
+                        !ok -> p?.sendSystemMessage(Component.literal("§6[FA] §cCouldn't reach GitHub — try again in a bit."))
+                        !updateAvailable -> p?.sendSystemMessage(Component.literal("§6[FA] §aYou're on the latest version (§e${FamilyAddons.VERSION}§a)."))
+                        downloaded -> sendDownloadedReminder()
+                        else -> {
+                            handledVersion = latestVersion   // don't let the periodic check double up
+                            triggerDownloadFromChat()
+                        }
+                    }
+                }
+            } finally {
+                checking = false
+            }
+        }
+    }
+
+    /**
+     * Runs after every GitHub check (launch + periodic). With "Auto Download
+     * Updates" on, grabs the new jar silently so the next restart applies it;
+     * otherwise announces it in chat right away instead of waiting for the next
+     * launch. The title-screen prompt and the join-time chat notification stay
+     * in place as the failsafe if this path fails or is disabled.
+     */
+    private fun handleCheckResult() {
+        if (!updateAvailable) return
+        val version = latestVersion ?: return
+        if (version == handledVersion) return
+        if (downloading) return
+        handledVersion = version
+
+        if (FamilyConfigManager.config.general.autoDownloadUpdates) {
+            startBackgroundDownload(version)
+        } else if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().execute { sendUpdateChatNotification() }
+        }
+    }
+
+    private fun startBackgroundDownload(version: String) {
+        FamilyAddons.LOGGER.info("AutoUpdater: auto-downloading $version in the background")
+        startDownload { success ->
+            val player = Minecraft.getInstance().player
+            if (success) {
+                player?.sendSystemMessage(Component.literal("§6[FA] §aFamilyAddons §e$version §adownloaded — it will be active after your next restart."))
+            } else {
+                // Let the next periodic check retry, and the launch prompt /
+                // chat notification take over in the meantime.
+                handledVersion = null
+                player?.sendSystemMessage(Component.literal("§6[FA] §cBackground update download failed — will retry later, or run §f/faupdate§c."))
+            }
+        }
+    }
+
+    private fun sendDownloadedReminder() {
+        val player = Minecraft.getInstance().player ?: return
+        val latest = latestVersion ?: return
+        player.sendSystemMessage(Component.literal("§6[FA] §aUpdate §e$latest §ais downloaded — restart Minecraft to apply it."))
     }
 
     private fun sendUpdateChatNotification() {
@@ -198,7 +318,8 @@ object AutoUpdater {
         }
     }
 
-    private fun checkForUpdate() {
+    /** Returns true if GitHub answered and the release info was parsed. */
+    private fun checkForUpdate(): Boolean {
         try {
             val req = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.github.com/repos/$GITHUB_REPO/releases/latest"))
@@ -207,11 +328,11 @@ object AutoUpdater {
                 .GET().build()
             val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
             val json = JsonParser.parseString(resp.body()).asJsonObject
-            val tag = json.get("tag_name")?.asString?.trimStart('v') ?: return
-            val assets = json.getAsJsonArray("assets") ?: return
+            val tag = json.get("tag_name")?.asString?.trimStart('v') ?: return false
+            val assets = json.getAsJsonArray("assets") ?: return false
             val asset = assets.firstOrNull {
                 it.asJsonObject.get("name")?.asString?.endsWith(".jar") == true
-            } ?: return
+            } ?: return false
 
             latestVersion = tag
             downloadUrl = asset.asJsonObject.get("browser_download_url")?.asString
@@ -231,8 +352,10 @@ object AutoUpdater {
             } else {
                 FamilyAddons.LOGGER.info("AutoUpdater: already up to date (${FamilyAddons.VERSION})")
             }
+            return true
         } catch (e: Exception) {
             FamilyAddons.LOGGER.warn("AutoUpdater: check failed: ${e.message}")
+            return false
         }
     }
 
