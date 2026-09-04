@@ -84,15 +84,17 @@ object AutoUpdater {
             dispatcher.register(literal("faupdate").executes { checkNow(); 1 })
         }
 
-        // Respect the toggle — if disabled at startup, don't check or register the prompt listener.
-        if (!FamilyConfigManager.config.general.autoUpdaterEnabled) {
-            FamilyAddons.LOGGER.info("AutoUpdater: disabled in config, skipping check")
-            return
-        }
-
-        CompletableFuture.runAsync {
-            checkForUpdate()
-            handleCheckResult()
+        // Everything below is registered no matter what the toggle says at
+        // launch; each handler re-reads it when it fires. That way switching
+        // "Auto Updater" on mid-session starts the checks on the next tick
+        // instead of needing a restart.
+        if (FamilyConfigManager.config.general.autoUpdaterEnabled) {
+            CompletableFuture.runAsync {
+                checkForUpdate()
+                handleCheckResult()
+            }
+        } else {
+            FamilyAddons.LOGGER.info("AutoUpdater: disabled in config, skipping launch check")
         }
 
         // Periodic re-check while the game is running.
