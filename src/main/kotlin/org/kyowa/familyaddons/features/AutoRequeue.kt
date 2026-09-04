@@ -33,11 +33,27 @@ object AutoRequeue {
     private var checkTicksRemaining   = -1
     private var dungeonRequeueTicks   = 0
 
+    // ── Kuudra area detection ─────────────────────────────────
+    // Hypixel broadcasts "X entered Kuudra's Hollow, <Tier> Tier!" on the
+    // server you are LEAVING, right before "Sending to server ..." moves you
+    // into the instance. That transfer goes through the configuration phase,
+    // so ClientPlayConnectionEvents.JOIN fires again and resetAll() wiped
+    // inKuudra a few seconds before Elle's Phase 1 line — every Kuudra
+    // waypoint/beam feature stayed gated off and "KUUDRA DOWN!" was ignored.
+    // So, like Odin's KuudraUtils, treat the sidebar ("⏣ Kuudra's Hollow (T2)")
+    // and tab list ("Area: Kuudra") as the source of truth for being inside
+    // the instance; the chat trigger is kept only as a fallback.
+    private val SCOREBOARD_TIER = Regex("""Kuudra's Hollow \(T(\d)\)""")
+    private const val AREA_POLL_TICKS = 10
+    private var inKuudraArea = false
+    private var areaTicker   = AREA_POLL_TICKS
+
     // ── Kuudra state queries (used by Kuudra waypoint/ESP features) ──
-    // inKuudra is true from the "entered Kuudra's Hollow" chat message until
-    // "KUUDRA DOWN!", i.e. the whole fight window (P1–P3).
-    fun isInKuudra(): Boolean = inKuudra
-    fun isInKuudraArea(): Boolean = inKuudra
+    // inKuudra (chat trigger) is true from run start until "KUUDRA DOWN!";
+    // inKuudraArea is true while the scoreboard/tab list says we're inside
+    // Kuudra's Hollow. Either one is enough for the render features.
+    fun isInKuudra(): Boolean = inKuudra || inKuudraArea
+    fun isInKuudraArea(): Boolean = inKuudraArea
     fun chatTriggerActive(): Boolean = inKuudra
 
     /** 1=Basic, 2=Hot, 3=Burning, 4=Fiery, 5=Infernal (defaults to Infernal). */
@@ -61,6 +77,8 @@ object AutoRequeue {
         kuudraDiedThisRun      = false
         kuudraWaiting          = false
         kuudraWaitTicks        = 0
+        inKuudraArea           = false
+        areaTicker             = AREA_POLL_TICKS   // re-poll on the next tick
 
         inDungeon              = false
         dungeonNeedsDowntime.clear()
@@ -87,8 +105,52 @@ object AutoRequeue {
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             DtTitle.tick()
             DungeonDtTitle.tick()
+            tickKuudraArea(client)
             tickKuudra()
             tickDungeon(client)
+        }
+    }
+
+    // ── Kuudra area tick ──────────────────────────────────────
+    private fun tickKuudraArea(client: Minecraft) {
+        if (++areaTicker < AREA_POLL_TICKS) return
+        areaTicker = 0
+
+        val nowInArea = detectKuudraArea(client)
+        if (nowInArea && !inKuudraArea) {
+            // Just landed in the instance: re-arm the run state that the
+            // transfer's JOIN reset wiped. DT requests made during the run
+            // still work because they arrive after this point.
+            inKuudra          = true
+            kuudraDiedThisRun = false
+            kuudraWaiting     = false
+            kuudraWaitTicks   = 0
+        }
+        inKuudraArea = nowInArea
+    }
+
+    /** Sidebar "Kuudra's Hollow (T#)" (also updates the tier) or tab "Area: Kuudra". */
+    private fun detectKuudraArea(client: Minecraft): Boolean {
+        if (client.level == null) return false
+
+        for (line in DevTools.getScoreboardLines(client)) {
+            val match = SCOREBOARD_TIER.find(line) ?: continue
+            when (match.groupValues[1].toIntOrNull()) {
+                1 -> kuudraTier = "basic"
+                2 -> kuudraTier = "hot"
+                3 -> kuudraTier = "burning"
+                4 -> kuudraTier = "fiery"
+                5 -> kuudraTier = "infernal"
+            }
+            return true
+        }
+
+        val tabList = client.connection?.onlinePlayers ?: return false
+        return tabList.any { entry ->
+            entry.tabListDisplayName?.string
+                ?.replace(COLOR_CODE_REGEX, "")
+                ?.trim()
+                ?.startsWith("Area: Kuudra") == true
         }
     }
 
