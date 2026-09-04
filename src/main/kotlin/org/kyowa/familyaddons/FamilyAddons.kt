@@ -17,7 +17,7 @@ val COLOR_CODE_REGEX = Regex("§.")
 object FamilyAddons : ClientModInitializer {
 
     val LOGGER = LoggerFactory.getLogger("FamilyAddons")
-    const val VERSION = "1.0.0"
+    const val VERSION = "1.0.1"
     const val MC_VERSION = "26.2"
 
     private var hudEditorMouseWasDown = false
