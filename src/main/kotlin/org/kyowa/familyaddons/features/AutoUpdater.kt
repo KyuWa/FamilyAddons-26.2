@@ -65,10 +65,10 @@ object AutoUpdater {
     // ── Background re-check while playing ─────────────────────────────
     // The launch-time check alone meant a release published mid-session was
     // only discovered on the next launch, which then needed one more restart
-    // to actually load it. Re-poll every 5 minutes (the worker absorbs the
+    // to actually load it. Re-poll every minute (the worker absorbs the
     // load, see UPDATE_BASE) and, if enabled, download right away so the next
     // restart already has the new jar.
-    private const val RECHECK_TICKS = 20 * 60 * 5
+    private const val RECHECK_TICKS = 20 * 60
     private var recheckTicker = 0
     @Volatile private var checking = false
     /** Version already auto-downloaded or announced, so repeated checks stay quiet. */

@@ -35,7 +35,7 @@ class GeneralConfig {
     var autoUpdaterEnabled = true
 
     @Expose @JvmField
-    @ConfigOption(name = "Auto Download Updates", desc = "Keep checking for updates every 5 minutes while you play and download new versions in the background, so the next restart already runs them. The launch prompt and chat notification stay as a fallback.")
+    @ConfigOption(name = "Auto Download Updates", desc = "Keep checking for updates every minute while you play and download new versions in the background, so the next restart already runs them. The launch prompt and chat notification stay as a fallback.")
     @ConfigEditorBoolean
     var autoDownloadUpdates = true
 }
