@@ -221,10 +221,16 @@ object AutoUpdater {
 
     private fun startBackgroundDownload(version: String) {
         FamilyAddons.LOGGER.info("AutoUpdater: auto-downloading $version in the background")
+        // Announced once per version (handledVersion guards the repeat checks).
+        Minecraft.getInstance().execute {
+            Minecraft.getInstance().player?.sendSystemMessage(
+                Component.literal("§6[FA] §eNew update §a$version §edetected — downloading, it will be applied on your next restart.")
+            )
+        }
         startDownload { success ->
             val player = Minecraft.getInstance().player
             if (success) {
-                player?.sendSystemMessage(Component.literal("§6[FA] §aFamilyAddons §e$version §adownloaded — it will be active after your next restart."))
+                player?.sendSystemMessage(Component.literal("§6[FA] §aFamilyAddons §e$version §adownloaded — restart whenever you're ready."))
             } else {
                 // Let the next periodic check retry, and the launch prompt /
                 // chat notification take over in the meantime.
