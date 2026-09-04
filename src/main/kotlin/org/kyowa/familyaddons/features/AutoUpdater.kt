@@ -28,7 +28,13 @@ import java.util.concurrent.CompletableFuture
 
 object AutoUpdater {
 
-    private const val GITHUB_REPO = "KyuWa/FamilyAddons-26.2"
+    // Update checks and downloads go through a small Cloudflare Worker that
+    // proxies GitHub with a read-only token. That keeps the repos private and
+    // sidesteps GitHub's 60 req/h anonymous API limit (the worker caches for
+    // 60s, so all players together cost GitHub ~1 request a minute).
+    //   GET $UPDATE_BASE/latest   -> {"version":"1.1.3","notes":[...],"size":N}
+    //   GET $UPDATE_BASE/download -> the release jar
+    private const val UPDATE_BASE = "https://fa-updates.220395610.workers.dev/26.2"
 
     private val http = HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.ALWAYS).build()
 
@@ -59,10 +65,10 @@ object AutoUpdater {
     // ── Background re-check while playing ─────────────────────────────
     // The launch-time check alone meant a release published mid-session was
     // only discovered on the next launch, which then needed one more restart
-    // to actually load it. Re-poll GitHub every 10 minutes (well under the
-    // 60 req/h anonymous API limit) and, if enabled, download right away so
-    // the next restart already has the new jar.
-    private const val RECHECK_TICKS = 20 * 60 * 10
+    // to actually load it. Re-poll every 5 minutes (the worker absorbs the
+    // load, see UPDATE_BASE) and, if enabled, download right away so the next
+    // restart already has the new jar.
+    private const val RECHECK_TICKS = 20 * 60 * 5
     private var recheckTicker = 0
     @Volatile private var checking = false
     /** Version already auto-downloaded or announced, so repeated checks stay quiet. */
@@ -169,7 +175,7 @@ object AutoUpdater {
             player?.sendSystemMessage(Component.literal("§6[FA] §7Already downloading an update…"))
             return
         }
-        player?.sendSystemMessage(Component.literal("§6[FA] §7Checking GitHub for updates…"))
+        player?.sendSystemMessage(Component.literal("§6[FA] §7Checking for updates…"))
         checking = true
         CompletableFuture.runAsync {
             try {
@@ -177,7 +183,7 @@ object AutoUpdater {
                 mc.execute {
                     val p = mc.player
                     when {
-                        !ok -> p?.sendSystemMessage(Component.literal("§6[FA] §cCouldn't reach GitHub — try again in a bit."))
+                        !ok -> p?.sendSystemMessage(Component.literal("§6[FA] §cCouldn't reach the update server — try again in a bit."))
                         !updateAvailable -> p?.sendSystemMessage(Component.literal("§6[FA] §aYou're on the latest version (§e${FamilyAddons.VERSION}§a)."))
                         downloaded -> sendDownloadedReminder()
                         else -> {
@@ -322,33 +328,29 @@ object AutoUpdater {
     private fun checkForUpdate(): Boolean {
         try {
             val req = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.github.com/repos/$GITHUB_REPO/releases/latest"))
-                .header("Accept", "application/vnd.github+json")
+                .uri(URI.create("$UPDATE_BASE/latest"))
+                .header("Accept", "application/json")
                 .header("User-Agent", "FamilyAddons/${FamilyAddons.VERSION}")
                 .GET().build()
             val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
+            if (resp.statusCode() != 200) {
+                FamilyAddons.LOGGER.warn("AutoUpdater: update server answered ${resp.statusCode()}: ${resp.body().take(120)}")
+                return false
+            }
             val json = JsonParser.parseString(resp.body()).asJsonObject
-            val tag = json.get("tag_name")?.asString?.trimStart('v') ?: return false
-            val assets = json.getAsJsonArray("assets") ?: return false
-            val asset = assets.firstOrNull {
-                it.asJsonObject.get("name")?.asString?.endsWith(".jar") == true
-            } ?: return false
+            val version = json.get("version")?.asString?.trimStart('v')?.takeIf { it.isNotBlank() } ?: return false
 
-            latestVersion = tag
-            downloadUrl = asset.asJsonObject.get("browser_download_url")?.asString
+            latestVersion = version
+            downloadUrl = "$UPDATE_BASE/download"
+            releaseNotes = json.getAsJsonArray("notes")
+                ?.mapNotNull { it.asString.trim().takeIf(String::isNotEmpty) }
+                ?.take(8) // cap at 8 lines so it fits the screen
+                ?: emptyList()
 
-            // Parse release notes from the body field
-            val body = json.get("body")?.asString ?: ""
-            releaseNotes = body.lines()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .take(8) // cap at 8 lines so it fits the screen
-
-            updateAvailable = isNewer(tag, FamilyAddons.VERSION)
+            updateAvailable = isNewer(version, FamilyAddons.VERSION)
 
             if (updateAvailable) {
-                FamilyAddons.LOGGER.info("AutoUpdater: update available — $tag (you have ${FamilyAddons.VERSION})")
-                FamilyAddons.LOGGER.info("AutoUpdater: download URL — $downloadUrl")
+                FamilyAddons.LOGGER.info("AutoUpdater: update available — $version (you have ${FamilyAddons.VERSION})")
             } else {
                 FamilyAddons.LOGGER.info("AutoUpdater: already up to date (${FamilyAddons.VERSION})")
             }
