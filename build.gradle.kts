@@ -56,5 +56,5 @@ java {
 
 // Un-obfuscated: the final artifact is produced by `jar` (no `remapJar`).
 tasks.jar {
-    archiveVersion.set("1.0.0")
+    archiveVersion.set("26.2")
 }
