@@ -215,8 +215,8 @@ object KuudraCrateWaypoints {
                     val dx = nx - prevX; val dz = nz - prevZ
                     val len = Math.sqrt((dx*dx + dz*dz).toDouble()).toFloat().coerceAtLeast(1e-4f)
                     val nrmX = dx / len; val nrmZ = dz / len
-                    buf.addVertex(pose, prevX, cy, prevZ).setColor(r, g, b, alpha).setNormal(pose, nrmX, 0f, nrmZ)
-                    buf.addVertex(pose, nx, cy, nz).setColor(r, g, b, alpha).setNormal(pose, nrmX, 0f, nrmZ)
+                    buf.addVertex(pose, prevX, cy, prevZ).setColor(r, g, b, alpha).setNormal(pose, nrmX, 0f, nrmZ).setLineWidth(2.0f)
+                    buf.addVertex(pose, nx, cy, nz).setColor(r, g, b, alpha).setNormal(pose, nrmX, 0f, nrmZ).setLineWidth(2.0f)
                     prevX = nx; prevZ = nz
                 }
             }

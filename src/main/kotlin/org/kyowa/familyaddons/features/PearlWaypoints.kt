@@ -449,8 +449,8 @@ object PearlWaypoints {
                     val (x1, z1) = pts[i + 1]
                     val dx = x1 - x0; val dz = z1 - z0
                     val len = sqrt((dx * dx + dz * dz).toDouble()).toFloat().coerceAtLeast(1e-4f)
-                    buf.addVertex(pose, x0, cy, z0).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len)
-                    buf.addVertex(pose, x1, cy, z1).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len)
+                    buf.addVertex(pose, x0, cy, z0).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len).setLineWidth(2.0f)
+                    buf.addVertex(pose, x1, cy, z1).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len).setLineWidth(2.0f)
                 }
             }
         }
@@ -479,8 +479,8 @@ object PearlWaypoints {
                     val nz = (cz + radius * Math.sin(angle.toDouble())).toFloat()
                     val dx = nx - prevX; val dz = nz - prevZ
                     val len = sqrt((dx * dx + dz * dz).toDouble()).toFloat().coerceAtLeast(1e-4f)
-                    buf.addVertex(pose, prevX, cy, prevZ).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len)
-                    buf.addVertex(pose, nx, cy, nz).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len)
+                    buf.addVertex(pose, prevX, cy, prevZ).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len).setLineWidth(2.0f)
+                    buf.addVertex(pose, nx, cy, nz).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len).setLineWidth(2.0f)
                     prevX = nx; prevZ = nz
                 }
             }
