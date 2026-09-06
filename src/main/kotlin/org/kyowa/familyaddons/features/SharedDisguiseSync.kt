@@ -57,7 +57,10 @@ object SharedDisguiseSync {
 
         CompletableFuture.runAsync {
             try {
-                val body = """{"username":"$username","mobId":"${cfg.mobId}","baby":${cfg.baby},"sheared":${cfg.sheared},"customScale":$effectiveScale}"""
+                // Resource ids are lowercase-only; push the normalised form so a
+                // "Sniffer" typed into the box does not break everyone else's render.
+                val mobId = cfg.mobId.trim().lowercase()
+                val body = """{"username":"$username","mobId":"$mobId","baby":${cfg.baby},"sheared":${cfg.sheared},"customScale":$effectiveScale}"""
                 val req = HttpRequest.newBuilder()
                     .uri(URI.create("$WORKER_URL/disguise"))
                     .header("Content-Type", "application/json")
@@ -65,7 +68,7 @@ object SharedDisguiseSync {
                     .PUT(HttpRequest.BodyPublishers.ofString(body))
                     .build()
                 http.send(req, HttpResponse.BodyHandlers.ofString())
-                FamilyAddons.LOGGER.info("SharedDisguiseSync: pushed $username → ${cfg.mobId} (scale=$effectiveScale)")
+                FamilyAddons.LOGGER.info("SharedDisguiseSync: pushed $username → $mobId (scale=$effectiveScale)")
             } catch (e: Exception) {
                 FamilyAddons.LOGGER.warn("SharedDisguiseSync: push failed: ${e.message}")
             }
@@ -107,7 +110,9 @@ object SharedDisguiseSync {
                 val result = mutableMapOf<String, SyncedDisguise>()
                 for ((name, entry) in json.entrySet()) {
                     val obj = entry.asJsonObject
-                    val mobId = obj.get("mobId")?.asString ?: continue
+                    // Older clients pushed the id as typed ("minecraft:Sniffer"),
+                    // which Identifier.tryParse rejects — normalise on the way in too.
+                    val mobId = obj.get("mobId")?.asString?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: continue
                     val baby = obj.get("baby")?.asBoolean ?: false
                     val sheared = obj.get("sheared")?.asBoolean ?: false
                     // Default to 1.0 if the worker hasn't been updated yet or the
