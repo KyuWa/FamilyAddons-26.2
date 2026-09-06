@@ -22,6 +22,10 @@ class GeneralConfig {
     @ConfigEditorText
     var hypixelApiKey = ""
 
+    /** Version that last ran, so the updater can say "updated from X to Y" once. Not in the GUI. */
+    @Expose @JvmField
+    var lastRunVersion = ""
+
     @JvmField
     @ConfigOption(name = "Get API Key", desc = "Opens developer.hypixel.net/dashboard in your browser.")
     @ConfigEditorButton(buttonText = "Open")
