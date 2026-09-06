@@ -93,6 +93,15 @@ object FamilyConfigManager {
             }
         }
 
+        // Translator languages were dropdown indices before becoming text
+        // boxes; turn a stored number into the name it meant.
+        (obj.get("translator") as? JsonObject)?.let { tr ->
+            for (k in listOf("targetLanguage", "outgoingLanguage")) {
+                val v = tr.get(k) ?: continue
+                if (v.isJsonPrimitive && v.asJsonPrimitive.isNumber) tr.addProperty(k, TranslatorConfig.nameOfIndex(v.asInt))
+            }
+        }
+
         // "Bestiary" category merged into "Highlight/BE" (the highlight
         // object). Renames avoid clashes with existing highlight keys.
         (obj.remove("bestiary") as? JsonObject)?.let { legacy ->

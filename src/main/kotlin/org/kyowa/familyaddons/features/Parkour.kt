@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import com.google.gson.GsonBuilder
+import org.kyowa.familyaddons.util.FaChat
 import com.google.gson.reflect.TypeToken
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
@@ -373,7 +374,7 @@ object Parkour {
     }
     private fun chat(msg: String) {
         Minecraft.getInstance().execute {
-            Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] $msg"))
+            Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("$msg"))
         }
     }
     internal fun drawBoxEdges(

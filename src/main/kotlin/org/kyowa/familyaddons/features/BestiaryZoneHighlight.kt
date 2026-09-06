@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import com.google.gson.JsonObject
+import org.kyowa.familyaddons.util.FaChat
 import com.google.gson.JsonParser
 import java.io.File
 import java.net.URI
@@ -663,7 +664,7 @@ object BestiaryZoneHighlight {
     private fun chat(msg: String) {
         Minecraft.getInstance().execute {
             Minecraft.getInstance().player?.sendSystemMessage(
-                net.minecraft.network.chat.Component.literal("§6[FA] $msg")
+                FaChat.prefixed("$msg")
             )
         }
     }

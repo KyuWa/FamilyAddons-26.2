@@ -1,5 +1,7 @@
 package org.kyowa.familyaddons.features
 
+import org.kyowa.familyaddons.util.FaChat
+
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.core.component.DataComponents
@@ -79,7 +81,7 @@ object GfsKeybinds {
 
         val needed = max - current
         if (needed <= 0) {
-            chat(player, "§6[FA] §7Already at max stack size.")
+            FaChat.send("§7Already at max stack size.")
             return
         }
 

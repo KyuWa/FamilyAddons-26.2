@@ -18,6 +18,10 @@ class FamilyConfig : Config() {
     var chatFilters = ChatFiltersConfig()
 
     @Expose @JvmField
+    @Category(name = "Translator", desc = "Translate chat — click a line or auto-translate, any language")
+    var translator = TranslatorConfig()
+
+    @Expose @JvmField
     @Category(name = "Utilities", desc = "General utility features")
     var utilities = UtilitiesConfig()
 

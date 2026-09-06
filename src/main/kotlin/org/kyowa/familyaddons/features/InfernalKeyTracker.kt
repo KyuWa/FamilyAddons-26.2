@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import org.kyowa.familyaddons.COLOR_CODE_REGEX
+import org.kyowa.familyaddons.util.FaChat
 import com.google.gson.JsonParser
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
@@ -324,7 +325,7 @@ object InfernalKeyTracker {
 
     private fun chat(msg: String) {
         Minecraft.getInstance().execute {
-            Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] $msg"))
+            Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("$msg"))
         }
     }
 }

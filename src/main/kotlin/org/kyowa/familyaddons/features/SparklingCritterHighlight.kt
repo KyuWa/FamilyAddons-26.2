@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import com.mojang.blaze3d.vertex.PoseStack
+import org.kyowa.familyaddons.util.FaChat
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.Camera
@@ -183,10 +184,9 @@ object SparklingCritterHighlight {
             val file = java.io.File(mc.gameDirectory, "config/familyaddons/critter_dump.txt")
             file.parentFile.mkdirs()
             file.appendText(sb.toString())
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§6[FA] §a$count entities dumped §7→ §fconfig/familyaddons/critter_dump.txt"))
+            player.sendSystemMessage(FaChat.prefixed("§a$count entities dumped §7→ §fconfig/familyaddons/critter_dump.txt"))
         } catch (e: Exception) {
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("§6[FA] §cDump failed: ${e.message}"))
+            player.sendSystemMessage(FaChat.prefixed("§cDump failed: ${e.message}"))
         }
     }
 }

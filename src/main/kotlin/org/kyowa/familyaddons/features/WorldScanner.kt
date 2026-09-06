@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
+import org.kyowa.familyaddons.util.FaChat
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.state.BlockState
@@ -312,7 +313,7 @@ object WorldScanner {
         waypoints[structure.displayName] = WaypointData(targetPos, structure.category, structure.r, structure.g, structure.b)
         if (FamilyConfigManager.config.worldScanner.sendCoordsInChat) {
             Minecraft.getInstance().execute {
-                Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] §a${structure.displayName} §7found at §b${targetPos.x}, ${targetPos.y}, ${targetPos.z}"))
+                Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("§a${structure.displayName} §7found at §b${targetPos.x}, ${targetPos.y}, ${targetPos.z}"))
             }
         }
     }
@@ -322,7 +323,7 @@ object WorldScanner {
         waypoints[name] = WaypointData(pos.immutable(), category, r, g, b)
         if (FamilyConfigManager.config.worldScanner.sendCoordsInChat) {
             Minecraft.getInstance().execute {
-                Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] §a$name §7found at §b${pos.x}, ${pos.y}, ${pos.z}"))
+                Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("§a$name §7found at §b${pos.x}, ${pos.y}, ${pos.z}"))
             }
         }
     }

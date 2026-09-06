@@ -1,5 +1,7 @@
 package org.kyowa.familyaddons.features
 
+import org.kyowa.familyaddons.util.FaChat
+
 import org.kyowa.familyaddons.COLOR_CODE_REGEX
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
@@ -281,7 +283,7 @@ object AutoRequeue {
         if (plain.contains("left the party", ignoreCase = true) && inKuudra) {
             kuudraCancelRequeue = true
             kuudraDtRequester   = null
-            chat("§e[FA] Party member left — Kuudra requeue cancelled.")
+            FaChat.send("§eParty member left — Kuudra requeue cancelled.")
             return
         }
 

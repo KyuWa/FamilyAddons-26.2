@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.commands
 
 import com.mojang.brigadier.arguments.IntegerArgumentType
+import org.kyowa.familyaddons.util.FaChat
 import com.mojang.brigadier.arguments.StringArgumentType
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal
@@ -38,6 +39,9 @@ object TestCommand {
                         1
                     })
 
+                    // /fa tr reload|clear|status — translator maintenance
+                    .then(TranslateCommand.faSubtree())
+
                     // /fa gui
                     .then(literal("gui").executes {
                         openGuiNextTick = true
@@ -49,9 +53,9 @@ object TestCommand {
                         val p = ctx.source.player
                         val members = PartyTracker.members
                         if (members.isEmpty()) {
-                            p.sendSystemMessage(Component.literal("§6[FA] §7No cached party members."))
+                            p.sendSystemMessage(FaChat.prefixed("§7No cached party members."))
                         } else {
-                            p.sendSystemMessage(Component.literal("§6[FA] §eCached party members:"))
+                            p.sendSystemMessage(FaChat.prefixed("§eCached party members:"))
                             members.forEach { (name, rank) ->
                                 val rankStr = if (rank.isNotEmpty()) "§7[§f$rank§7] " else ""
                                 val leaderMark = if (PartyTracker.isLeader(name)) " §6(leader)" else ""
@@ -75,17 +79,17 @@ object TestCommand {
                             val p = ctx.source.player
                             val island = Waypoints.getCurrentIsland()
                             if (island == null) {
-                                p.sendSystemMessage(Component.literal("§c[FA] Can't detect island."))
+                                p.sendSystemMessage(FaChat.prefixed("§cCan't detect island."))
                             } else {
                                 Waypoints.clearWaypoints(island)
-                                p.sendSystemMessage(Component.literal("§a[FA] Cleared all waypoints on §e$island§a."))
+                                p.sendSystemMessage(FaChat.prefixed("§aCleared all waypoints on §e$island§a."))
                             }
                             1
                         })
                         .then(literal("list").executes { ctx ->
                             val p = ctx.source.player
                             val island = Waypoints.getCurrentIsland()
-                            if (island == null) { p.sendSystemMessage(Component.literal("§c[FA] Can't detect island.")); return@executes 1 }
+                            if (island == null) { p.sendSystemMessage(FaChat.prefixed("§cCan't detect island.")); return@executes 1 }
                             val wps = Waypoints.getWaypoints(island)
                             if (wps.isEmpty()) { p.sendSystemMessage(Component.literal("§7No waypoints on §e$island§7.")); return@executes 1 }
                             p.sendSystemMessage(Component.literal("§6Waypoints on §e$island§6:"))
@@ -97,13 +101,13 @@ object TestCommand {
                                 .executes { ctx ->
                                     val p = ctx.source.player
                                     val island = Waypoints.getCurrentIsland()
-                                    if (island == null) { p.sendSystemMessage(Component.literal("§c[FA] Can't detect island.")); return@executes 1 }
+                                    if (island == null) { p.sendSystemMessage(FaChat.prefixed("§cCan't detect island.")); return@executes 1 }
                                     val idx = IntegerArgumentType.getInteger(ctx, "index")
                                     // removeWaypoint is the correct function name in Waypoints.kt
                                     if (Waypoints.removeWaypoint(island, idx)) {
-                                        p.sendSystemMessage(Component.literal("§a[FA] Deleted waypoint §e$idx§a."))
+                                        p.sendSystemMessage(FaChat.prefixed("§aDeleted waypoint §e$idx§a."))
                                     } else {
-                                        p.sendSystemMessage(Component.literal("§c[FA] No waypoint at index $idx."))
+                                        p.sendSystemMessage(FaChat.prefixed("§cNo waypoint at index $idx."))
                                     }
                                     1
                                 })))
@@ -116,10 +120,10 @@ object TestCommand {
                                 val query = StringArgumentType.getString(ctx, "name")
                                 val results = NpcLocations.findNpc(query)
                                 if (results.isEmpty()) {
-                                    p.sendSystemMessage(Component.literal("§c[FA] No NPC found matching '§e$query§c'."))
+                                    p.sendSystemMessage(FaChat.prefixed("§cNo NPC found matching '§e$query§c'."))
                                 } else {
                                     results.forEach { npc ->
-                                        p.sendSystemMessage(Component.literal("§6[FA] §e${npc.name} §7is in §b${npc.location} §7at §f${npc.x.toInt()}, ${npc.y.toInt()}, ${npc.z.toInt()}"))
+                                        p.sendSystemMessage(FaChat.prefixed("§e${npc.name} §7is in §b${npc.location} §7at §f${npc.x.toInt()}, ${npc.y.toInt()}, ${npc.z.toInt()}"))
                                         NpcLocations.activeWaypoints.add(NpcLocations.ActiveNpcWaypoint(npc.name, npc.x, npc.y, npc.z))
                                     }
                                 }
@@ -154,7 +158,7 @@ object TestCommand {
                     // /fa npcclear
                     .then(literal("npcclear").executes { ctx ->
                         NpcLocations.activeWaypoints.clear()
-                        ctx.source.player.sendSystemMessage(Component.literal("§6[FA] §7Cleared all NPC waypoints."))
+                        ctx.source.player.sendSystemMessage(FaChat.prefixed("§7Cleared all NPC waypoints."))
                         1
                     })
 
@@ -178,7 +182,7 @@ object TestCommand {
                         // Dev-only commands below — guarded at runtime
                         .then(literal("add").executes {
                             if (!FamilyConfigManager.config.parkour.developerMode) {
-                                Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] §cDeveloper mode required. Enable it in §e/fa §c→ Parkour."))
+                                Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("§cDeveloper mode required. Enable it in §e/fa §c→ Parkour."))
                             } else {
                                 val p = Minecraft.getInstance().player ?: return@executes 1
                                 // addCheckpoint is the correct function name in Parkour.kt
@@ -188,7 +192,7 @@ object TestCommand {
                         })
                         .then(literal("remove").executes {
                             if (!FamilyConfigManager.config.parkour.developerMode) {
-                                Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] §cDeveloper mode required."))
+                                Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("§cDeveloper mode required."))
                             } else {
                                 // removeLast is the correct function name in Parkour.kt
                                 Parkour.removeLast()
@@ -198,14 +202,14 @@ object TestCommand {
                         .then(literal("edit")
                             .executes {
                                 if (!FamilyConfigManager.config.parkour.developerMode) {
-                                    Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] §cDeveloper mode required."))
+                                    Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("§cDeveloper mode required."))
                                 } else { Parkour.edit() }
                                 1
                             }
                             .then(argument("name", StringArgumentType.word())
                                 .executes { ctx ->
                                     if (!FamilyConfigManager.config.parkour.developerMode) {
-                                        Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] §cDeveloper mode required."))
+                                        Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("§cDeveloper mode required."))
                                     } else { Parkour.edit(StringArgumentType.getString(ctx, "name")) }
                                     1
                                 }))
@@ -217,7 +221,7 @@ object TestCommand {
                                 }))
                         .then(literal("clear").executes {
                             if (!FamilyConfigManager.config.parkour.developerMode) {
-                                Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] §cDeveloper mode required."))
+                                Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("§cDeveloper mode required."))
                             } else { Parkour.clearAll() }
                             1
                         })

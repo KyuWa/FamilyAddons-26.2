@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import com.google.gson.JsonParser
+import org.kyowa.familyaddons.util.FaChat
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.ClickEvent
@@ -119,7 +120,7 @@ object PartyRepCheck {
     private fun chatInvalidKey() {
         Minecraft.getInstance().execute {
             val player = Minecraft.getInstance().player ?: return@execute
-            val msg = Component.literal("§6[FA] §cInvalid or missing API key. ")
+            val msg = FaChat.prefixed("§cInvalid or missing API key. ")
                 .append(
                     Component.literal("§b§n[Get one here]")
                         .withStyle { it.withClickEvent(
@@ -132,7 +133,7 @@ object PartyRepCheck {
 
     private fun chat(msg: String) {
         Minecraft.getInstance().execute {
-            Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] $msg"))
+            Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("$msg"))
         }
     }
 }

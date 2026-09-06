@@ -1,0 +1,8 @@
+# Only needed if deploying with the wrangler CLI instead of the dashboard:
+#   cd worker
+#   npx wrangler secret put GROQ_API_KEY
+#   npx wrangler secret put FA_SECRET
+#   npx wrangler deploy
+name = "fa-translate"
+main = "translate-worker.js"
+compatibility_date = "2026-09-01"

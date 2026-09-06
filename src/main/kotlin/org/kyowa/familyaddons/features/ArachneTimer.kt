@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+import org.kyowa.familyaddons.util.FaChat
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.minecraft.client.Minecraft
@@ -77,7 +78,7 @@ object ArachneTimer {
     private fun notify(duration: String) {
         Minecraft.getInstance().execute {
             Minecraft.getInstance().player?.sendSystemMessage(
-                Component.literal("§6[FA] §aArachne Timer started — $duration")
+                FaChat.prefixed("§aArachne Timer started — $duration")
             )
         }
     }

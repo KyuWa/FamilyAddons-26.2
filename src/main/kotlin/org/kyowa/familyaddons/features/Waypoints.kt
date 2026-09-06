@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import org.kyowa.familyaddons.COLOR_CODE_REGEX
+import org.kyowa.familyaddons.util.FaChat
 import org.kyowa.familyaddons.config.FamilyConfigManager
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
@@ -201,7 +202,7 @@ object Waypoints {
 
     private fun chat(msg: String) {
         Minecraft.getInstance().execute {
-            Minecraft.getInstance().player?.sendSystemMessage(Component.literal("§6[FA] $msg"))
+            Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed("$msg"))
         }
     }
 

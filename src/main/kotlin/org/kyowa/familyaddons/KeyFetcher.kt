@@ -9,8 +9,9 @@ import java.net.http.HttpResponse
 object KeyFetcher {
 
     private const val WORKER_URL = "https://key.kyowa.uk/"
-    private const val SECRET_HEADER = "X-FA-Secret"
-    private const val SECRET_TOKEN = "41d050ef-7801-47bd-880e-f0e052a3bbc3"
+    // Shared with the other workers (translator) so one secret gates them all.
+    const val SECRET_HEADER = "X-FA-Secret"
+    const val SECRET_TOKEN = "41d050ef-7801-47bd-880e-f0e052a3bbc3"
 
     private val client = HttpClient.newHttpClient()
     private var fetchedKey: String? = null
