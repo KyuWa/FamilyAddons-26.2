@@ -3,7 +3,13 @@ plugins {
     id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT"
 }
 
-version = "1.0.0"
+// Single source of truth for the mod version: FamilyAddons.VERSION in Kotlin.
+// Bump it there and this build, fabric.mod.json and the updater all agree.
+val modVersion: String = Regex("""const val VERSION = "([^"]+)"""")
+    .find(file("src/main/kotlin/org/kyowa/familyaddons/FamilyAddons.kt").readText())
+    ?.groupValues?.get(1)
+    ?: error("FamilyAddons.VERSION not found in FamilyAddons.kt")
+version = modVersion
 group = "org.kyowa"
 
 base {
