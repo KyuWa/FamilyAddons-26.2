@@ -40,6 +40,16 @@ class UtilitiesConfig {
     @ConfigEditorBoolean
     var arachneTimer = false
 
+    @Expose @JvmField
+    @ConfigOption(name = "No Blindness", desc = "Never apply the blindness effect to you (no black fog). Helps with motion sickness.")
+    @ConfigEditorBoolean
+    var noBlindness = false
+
+    @Expose @JvmField
+    @ConfigOption(name = "No Nausea", desc = "Never apply the nausea effect to you (no screen warping). Helps with motion sickness.")
+    @ConfigEditorBoolean
+    var noNausea = false
+
     // ── Camera ────────────────────────────────────────────────────────
     @Expose @JvmField
     @ConfigOption(name = "Camera", desc = "")

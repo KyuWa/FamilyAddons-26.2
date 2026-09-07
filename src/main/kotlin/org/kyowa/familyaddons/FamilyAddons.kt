@@ -19,7 +19,7 @@ val COLOR_CODE_REGEX = Regex("§.")
 object FamilyAddons : ClientModInitializer {
 
     val LOGGER = LoggerFactory.getLogger("FamilyAddons")
-    const val VERSION = "1.0.4"
+    const val VERSION = "1.0.5"
     const val MC_VERSION = "26.2"
 
     private var hudEditorMouseWasDown = false
@@ -48,6 +48,7 @@ object FamilyAddons : ClientModInitializer {
         GfsKeybinds.register()
         GorillaTactics.register()
         ArachneTimer.register()
+        NoDebuff.register()
         CameraHelper.register()
 
         // Crimson Isle
