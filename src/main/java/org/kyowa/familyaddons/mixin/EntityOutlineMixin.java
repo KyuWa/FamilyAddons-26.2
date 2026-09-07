@@ -6,6 +6,7 @@ import net.minecraft.world.entity.Entity;
 import org.kyowa.familyaddons.features.CorpseESP;
 import org.kyowa.familyaddons.features.DungeonHighlight;
 import org.kyowa.familyaddons.features.EntityHighlight;
+import org.kyowa.familyaddons.features.KuudraHighlight;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -27,6 +28,13 @@ public class EntityOutlineMixin<T extends Entity, S extends EntityRenderState> {
         int dungeonColor = DungeonHighlight.INSTANCE.getOutlineColor(entity);
         if (dungeonColor != 0) {
             state.outlineColor = dungeonColor;
+            return;
+        }
+
+        // Kuudra boss outline
+        int kuudraColor = KuudraHighlight.INSTANCE.getOutlineColor(entity);
+        if (kuudraColor != 0) {
+            state.outlineColor = kuudraColor;
             return;
         }
 

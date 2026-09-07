@@ -53,7 +53,183 @@ object BestiaryZoneHighlight {
     private val httpClient = HttpClient.newHttpClient()
     private var tickCounter = 0
 
-    private data class MobEntry(val displayName: String, val mobIds: List<String>, val maxKills: Long)
+    /**
+     * How to recognise a mob that has NO nametag (Hypixel renders some Torrhus
+     * critters as plain scaled vanilla mobs). [type] is the entity registry
+     * path ("bee"), width bounds are on the entity's bounding box.
+     */
+    data class EntityRule(val type: String, val minWidth: Float = 0f, val maxWidth: Float = Float.MAX_VALUE)
+
+    private data class MobEntry(
+        val displayName: String,
+        val mobIds: List<String>,
+        val maxKills: Long,
+        val entityRule: EntityRule? = null,
+    )
+
+    // Built-in nameless-mob rules, keyed by lowercase display name. Custom
+    // file entries with entityType/minWidth/maxWidth override these.
+    private val BUILTIN_ENTITY_RULES = mapOf(
+        // Torrhus Canyon (from critter dumps 2026-09-07): both render as bare
+        // vanilla mobs with no nametag at all.
+        "beeheemoth" to EntityRule("bee", minWidth = 0.9f),   // giant scaled bee (vanilla bee is 0.7 wide)
+        "drybark"    to EntityRule("creaking"),                // the walking dry tree
+    )
+
+    /** Entity rules for every mob in the selected zone, keyed by display name. */
+    @Volatile private var zoneEntityRules: Map<String, EntityRule> = emptyMap()
+
+    private fun cleanName(raw: String) = raw.replace(Regex("§[0-9a-fk-or]"), "").trim()
+
+    // ── Zone-scoped persistence ────────────────────────────────────────
+    // maxedMobs / bestiaryCaps entries are keyed "<neuKey>/<Mob Name>". The
+    // same family name exists in several zones with different caps and
+    // different progress (Bat: Island 50 vs Catacombs 1000, Enderman: Island
+    // 50 vs The End 3000), so a bare name is ambiguous. Legacy bare-name
+    // entries are migrated once per session in [migrateLegacyKeys].
+
+    private fun scoped(zoneKey: String, name: String) = "$zoneKey/$name"
+
+    /** NEU key of the zone selected in the config, or null for None/unknown. */
+    private fun currentZoneKey(): String? {
+        val idx = FamilyConfigManager.config.highlight.bestiaryZone
+        if (idx <= 0 || idx >= ZONES.size) return null
+        return ZONE_TO_NEU_KEY[ZONES[idx]]
+    }
+
+    /** Names persisted as maxed for [zoneKey]. */
+    private fun persistedMaxedFor(zoneKey: String): Set<String> {
+        val prefix = "$zoneKey/"
+        return FamilyConfigManager.config.highlight.maxedMobs
+            .filter { it.startsWith(prefix) }
+            .map { it.removePrefix(prefix) }
+            .toSet()
+    }
+
+    /**
+     * Cap override chain: the user's own bestiary pages (learned, always the
+     * freshest) → the snapshot bundled in the jar (bestiary_caps.json, read
+     * from KyoWaa's pages, so fresh installs get corrections like Beeheemoth
+     * without opening anything) → null, meaning "use the repo/custom value".
+     */
+    private fun learnedCap(zoneKey: String, name: String): Long? {
+        val key = scoped(zoneKey, name)
+        return FamilyConfigManager.config.highlight.bestiaryCaps[key] ?: bundledCaps[key]
+    }
+
+    private val bundledCaps: Map<String, Long> by lazy {
+        try {
+            val stream = BestiaryZoneHighlight::class.java.getResourceAsStream("/bestiary_caps.json")
+                ?: return@lazy emptyMap()
+            val root = JsonParser.parseString(stream.reader().readText()).asJsonObject
+            val caps = root.getAsJsonObject("caps") ?: return@lazy emptyMap()
+            caps.entrySet().associate { it.key to it.value.asLong }
+                .also { FamilyAddons.LOGGER.info("BestiaryZoneHighlight: bundled caps loaded — ${it.size} entries") }
+        } catch (e: Exception) {
+            FamilyAddons.LOGGER.warn("BestiaryZoneHighlight: bundled caps failed to load: ${e.message}")
+            emptyMap()
+        }
+    }
+
+    // Bestiary GUI page titles ("Bestiary ➜ Your Island", "(1/2) Bestiary ➜
+    // Moonglade Marsh", "Fishing ➜ Lava", "Critter Safari ➜ Icy Biome") →
+    // NEU zone key. Matched by prefix: Hypixel truncates long titles
+    // ("Mythological Creatur").
+    private val PAGE_TITLE_TO_KEY = listOf(
+        "Your Island" to "dynamic", "Hub" to "hub", "The Farming Islands" to "farming_1",
+        "The Garden" to "garden", "Spider's Den" to "combat_1", "The End" to "combat_3",
+        "Crimson Isle" to "crimson_isle", "Deep Caverns" to "mining_2",
+        "Dwarven Mines" to "mining_3", "Crystal Hollows" to "crystal_hollows",
+        "The Park" to "foraging_1", "Moonglade Marsh" to "foraging_2",
+        "Spooky Festival" to "spooky_festival", "The Catacombs" to "catacombs",
+        "Mythological Creatur" to "mythological_creatures", "Jerry" to "jerry",
+        "Kuudra" to "kuudra", "Torrhus Canyon" to "foraging_3", "Lotus Atoll" to "lotus_atoll",
+    )
+
+    /** Zone key for an open bestiary page title, or null if it is not a zone page. */
+    private fun pageZoneKey(title: String): String? {
+        val t = title.replace(Regex("""^\(\d+/\d+\)\s*"""), "").trim()
+        if (t.startsWith("Fishing ➜")) return "fishing"
+        if (t.startsWith("Critter Safari ➜")) return "safari"
+        if (!t.startsWith("Bestiary ➜")) return null
+        val sub = t.substringAfter("➜").trim()
+        if (sub.isEmpty()) return null
+        return PAGE_TITLE_TO_KEY.firstOrNull { sub.startsWith(it.first) }?.second
+    }
+
+    private var legacyMigrated = false
+
+    /**
+     * One-time upgrade of bare-name entries to zone-scoped keys. A name that
+     * exists in exactly one zone is re-keyed; an ambiguous one (Bat, Enderman,
+     * ...) or a non-mob (skill names the old tab-list parser picked up) is
+     * dropped — the API/GUI passes re-add real ones within a refresh.
+     */
+    private fun migrateLegacyKeys() {
+        if (legacyMigrated) return
+        legacyMigrated = true
+        val cfg = FamilyConfigManager.config.highlight
+        val bareMaxed = cfg.maxedMobs.filter { !it.contains('/') }
+        val bareCaps = cfg.bestiaryCaps.keys.filter { !it.contains('/') }
+        if (bareMaxed.isEmpty() && bareCaps.isEmpty()) return
+
+        val zonesByName = mutableMapOf<String, MutableSet<String>>()
+        for ((zone, mobs) in repoData.entries + customData.entries) {
+            for (m in mobs) {
+                val n = cleanName(m.displayName)
+                val mapped = NAME_REMAPS[n.lowercase()] ?: n
+                zonesByName.getOrPut(mapped.lowercase()) { mutableSetOf() }.add(zone)
+            }
+        }
+        fun target(name: String): String? {
+            val zones = zonesByName[name.lowercase()] ?: return null
+            return if (zones.size == 1) scoped(zones.first(), name) else null
+        }
+
+        var moved = 0; var dropped = 0
+        for (name in bareMaxed) {
+            cfg.maxedMobs.remove(name)
+            val t = target(name)
+            if (t != null) { cfg.maxedMobs.add(t); moved++ } else dropped++
+        }
+        for (name in bareCaps) {
+            val cap = cfg.bestiaryCaps.remove(name) ?: continue
+            val t = target(name)
+            if (t != null) { cfg.bestiaryCaps[t] = cap; moved++ } else dropped++
+        }
+        FamilyConfigManager.save()
+        FamilyAddons.LOGGER.info("BestiaryZoneHighlight: migrated legacy bestiary keys — $moved re-keyed by zone, $dropped ambiguous/unknown dropped")
+    }
+
+    /**
+     * True if [entity] is a nameless mob that one of the ACTIVE zone mobs is
+     * known to render as (see [EntityRule]). Called from EntityHighlight.
+     */
+    fun matchesNameless(entity: net.minecraft.world.entity.Entity): Boolean {
+        val rules = zoneEntityRules
+        if (rules.isEmpty()) return false
+        val active = activeMobNames
+        if (active.isEmpty()) return false
+        val type = net.minecraft.world.entity.EntityType.getKey(entity.type).path
+        val width = entity.bbWidth
+        for ((name, rule) in rules) {
+            if (name !in active) continue
+            if (rule.type != type) continue
+            if (width < rule.minWidth || width > rule.maxWidth) continue
+            return true
+        }
+        return false
+    }
+
+    private fun parseEntityRule(obj: JsonObject): EntityRule? {
+        val type = obj.get("entityType")?.asString?.trim()?.lowercase()?.removePrefix("minecraft:") ?: return null
+        if (type.isEmpty()) return null
+        return EntityRule(
+            type,
+            obj.get("minWidth")?.asFloat ?: 0f,
+            obj.get("maxWidth")?.asFloat ?: Float.MAX_VALUE,
+        )
+    }
     private var repoData: Map<String, List<MobEntry>> = emptyMap()
     private var repoLoaded = false
     private var neuBrackets: Map<Int, List<Long>> = emptyMap()
@@ -135,15 +311,21 @@ object BestiaryZoneHighlight {
                 }
 
                 val fullSet = mutableSetOf<String>()
+                val rules = mutableMapOf<String, EntityRule>()
                 for (mob in zoneMobs) {
-                    val cleanName = mob.displayName.replace(Regex("§[0-9a-fk-or]"), "").trim()
-                    fullSet.add(NAME_REMAPS[cleanName.lowercase()] ?: cleanName)
+                    val cleanName = cleanName(mob.displayName)
+                    val mapped = NAME_REMAPS[cleanName.lowercase()] ?: cleanName
+                    fullSet.add(mapped)
+                    (mob.entityRule ?: BUILTIN_ENTITY_RULES[cleanName.lowercase()])?.let { rules[mapped] = it }
                 }
                 allZoneMobNames = fullSet
+                zoneEntityRules = rules
                 FamilyAddons.LOGGER.info("BestiaryZoneHighlight: $zoneName zone loaded — ${fullSet.size} mobs: $fullSet")
 
+                migrateLegacyKeys()
+
                 // Apply persisted maxed mobs immediately
-                val persistedMaxed = cfg.maxedMobs
+                val persistedMaxed = persistedMaxedFor(neuKey)
                 run {
                     val filtered = applyMaxFilter(fullSet, persistedMaxed)
                     if (filtered != activeMobNames) {
@@ -171,20 +353,31 @@ object BestiaryZoneHighlight {
                             if (killsObj != null) {
                                 FamilyAddons.LOGGER.info("BestiaryZoneHighlight: API killsObj keys sample: ${killsObj.keySet().take(5)}")
                                 val apiMaxed = mutableSetOf<String>()
+                                val provablyNotMaxed = mutableSetOf<String>()
                                 for (mob in zoneMobs) {
-                                    val cleanName = mob.displayName.replace(Regex("§[0-9a-fk-or]"), "").trim()
+                                    val cleanName = cleanName(mob.displayName)
                                     val mappedName = NAME_REMAPS[cleanName.lowercase()] ?: cleanName
                                     val total = mob.mobIds.sumOf { id -> killsObj.get(id)?.asLong ?: 0L }
-                                    FamilyAddons.LOGGER.info("BestiaryZoneHighlight: mob '$cleanName' ids=${mob.mobIds} total=$total max=${mob.maxKills}")
-                                    if (total >= mob.maxKills) apiMaxed.add(mappedName)
+                                    val learned = learnedCap(neuKey, cleanName)
+                                    val cap = learned ?: mob.maxKills
+                                    FamilyAddons.LOGGER.info("BestiaryZoneHighlight: mob '$cleanName' ids=${mob.mobIds} total=$total max=$cap${if (learned != null) " (learned)" else ""}")
+                                    if (total >= cap) apiMaxed.add(mappedName)
+                                    // A cap read from the real bestiary page beats any earlier
+                                    // guess — if the API kills are below it, an old "maxed"
+                                    // entry (e.g. from a wrong repo cap) must be dropped again.
+                                    else if (learned != null) provablyNotMaxed.add(mappedName)
                                 }
-                                val newApiMaxed = apiMaxed - cfg.maxedMobs
-                                if (newApiMaxed.isNotEmpty()) {
-                                    cfg.maxedMobs.addAll(newApiMaxed)
+                                val persisted = persistedMaxedFor(neuKey)
+                                val newApiMaxed = apiMaxed - persisted
+                                val staleMaxed = provablyNotMaxed.filter { it in persisted }
+                                if (newApiMaxed.isNotEmpty() || staleMaxed.isNotEmpty()) {
+                                    newApiMaxed.forEach { cfg.maxedMobs.add(scoped(neuKey, it)) }
+                                    staleMaxed.forEach { cfg.maxedMobs.remove(scoped(neuKey, it)) }
                                     FamilyConfigManager.save()
-                                    FamilyAddons.LOGGER.info("BestiaryZoneHighlight: persisted API maxed mobs: $newApiMaxed")
+                                    if (newApiMaxed.isNotEmpty()) FamilyAddons.LOGGER.info("BestiaryZoneHighlight: persisted API maxed mobs: $newApiMaxed")
+                                    if (staleMaxed.isNotEmpty()) FamilyAddons.LOGGER.info("BestiaryZoneHighlight: un-maxed (learned cap not reached): $staleMaxed")
                                 }
-                                val allMaxed = apiMaxed + cfg.maxedMobs
+                                val allMaxed = apiMaxed + persistedMaxedFor(neuKey)
                                 val combined = applyMaxFilter(allZoneMobNames, allMaxed)
                                 if (combined != activeMobNames) {
                                     activeMobNames = combined
@@ -208,16 +401,20 @@ object BestiaryZoneHighlight {
         if (allZoneMobNames.isEmpty()) return
 
         val cfg = FamilyConfigManager.config.highlight
+        val zoneKey = currentZoneKey() ?: return
         val maxed = readMaxedMobsFromTablist()
 
-        val newMaxed = maxed - cfg.maxedMobs
+        // The tab list shows the island you are standing on, which need not
+        // be the selected zone — only persist names that belong to the zone.
+        val persisted = persistedMaxedFor(zoneKey)
+        val newMaxed = (maxed - persisted).filter { it in allZoneMobNames }
         if (newMaxed.isNotEmpty()) {
-            cfg.maxedMobs.addAll(newMaxed)
+            newMaxed.forEach { cfg.maxedMobs.add(scoped(zoneKey, it)) }
             FamilyConfigManager.save()
             FamilyAddons.LOGGER.info("BestiaryZoneHighlight: persisted new maxed mobs: $newMaxed")
         }
 
-        val allMaxed = maxed + cfg.maxedMobs
+        val allMaxed = maxed + persistedMaxedFor(zoneKey)
         val filtered = applyMaxFilter(allZoneMobNames, allMaxed)
         if (filtered != activeMobNames) {
             activeMobNames = filtered
@@ -292,7 +489,7 @@ object BestiaryZoneHighlight {
                     val maxKills = obj.get("maxKills")?.asLong
                         ?: obj.get("bracket")?.asInt?.let { neuBrackets[it]?.lastOrNull() }
                         ?: Long.MAX_VALUE
-                    entries.add(MobEntry(name, ids, maxKills))
+                    entries.add(MobEntry(name, ids, maxKills, parseEntityRule(obj)))
                 }
                 if (entries.isNotEmpty()) result[zoneKey] = entries
             }
@@ -323,6 +520,10 @@ object BestiaryZoneHighlight {
                     "  name     = exact in-game mob name without level/health decorations (required)",
                     "  mobs     = Hypixel API bestiary kill ids (optional; only needed so the API can detect MAX)",
                     "  maxKills = kills needed for MAX (optional; omit it and only tab-list MAX detection applies)",
+                    "  entityType/minWidth/maxWidth = for mobs WITHOUT a nametag: vanilla entity id (e.g. bee) and",
+                    "             an optional bounding-box width range, so the highlight can find them by shape.",
+                    "Caps are also learned automatically from the bestiary menu whenever you open a zone page,",
+                    "and a learned cap always wins over the repo/custom value.",
                     "A custom mob with the same name as a NEU repo mob replaces the repo entry.",
                     "Changes are picked up automatically within ~30 seconds while the game runs.",
                     "Copy the shape below into a real zone key (e.g. foraging_2) to use it."
@@ -365,9 +566,15 @@ object BestiaryZoneHighlight {
                         val name = mobObj.get("name")?.asString ?: return@forEach
                         val mobIds = mobObj.getAsJsonArray("mobs")?.map { it.asString }
                             ?: listOf(name.lowercase().replace(" ", "_"))
+                        // "cap" is the kill count for MAX (e.g. Bat: cap 50 = the "50/50"
+                        // shown in-game). The bracket's last tier is only a fallback —
+                        // most families max well before it (Beeheemoth: cap 25 in a
+                        // bracket ending at 10,000), so using the bracket end made the
+                        // API path never report MAX on zones without a tab-list section.
                         val bracket = mobObj.get("bracket")?.asInt ?: 1
                         val tierList = brackets[bracket] ?: listOf(250L)
-                        entries.add(MobEntry(name, mobIds, tierList.last()))
+                        val maxKills = mobObj.get("cap")?.asLong?.takeIf { it > 0 } ?: tierList.last()
+                        entries.add(MobEntry(name, mobIds, maxKills))
                     }
                 }
                 try {
@@ -425,7 +632,8 @@ object BestiaryZoneHighlight {
     }
 
     private fun captureTick(client: Minecraft) {
-        if (!captureMode) return
+        // Runs always: outside capture mode an open bestiary page is still
+        // read silently to learn caps / MAX state (see learnFromEntries).
         val player = client.player ?: return
         val menu = player.containerMenu
         if (menu === player.inventoryMenu) {
@@ -460,29 +668,24 @@ object BestiaryZoneHighlight {
         }
         if (++stableTicks >= 10) {
             lastDumpedContainerId = menu.containerId
-            dumpOpenContainer(silent = true)
+            if (captureMode) dumpOpenContainer(silent = true) else learnFromOpenContainer()
         }
     }
 
-    /**
-     * Read the currently open container page, log every mob entry (name +
-     * lore) to config/familyaddons/bestiary_dump.txt, cross-check the names
-     * against the NEU repo + custom file, and try to match new mobs to
-     * Hypixel API kill ids by name. Appends per page.
-     */
-    fun dumpOpenContainer(silent: Boolean = false) {
-        val mc = Minecraft.getInstance()
-        val player = mc.player ?: return
-        val menu = player.containerMenu
-        if (menu === player.inventoryMenu) {
-            if (!silent) chat("§cNo container open. Use §e/fa bestiarydump§c to arm capture mode, then open §e/bestiary§c.")
-            return
-        }
-        val title = mc.gui.screen()?.title?.string?.replace(COLOR_CODE_REGEX, "")?.trim() ?: "Unknown"
+    private data class GuiMob(val base: String, val rawName: String, val lore: List<String>, val locked: Boolean)
 
-        // Snapshot on the main thread; process/fetch async.
-        data class GuiMob(val base: String, val rawName: String, val lore: List<String>, val locked: Boolean)
-        val romanTier = Regex("""\s+[IVXLCDM]+$""")
+    private val ROMAN_TIER = Regex("""\s+[IVXLCDM]+$""")
+    private val KILLS_LINE = Regex("""^\s*Kills:\s*([\d,]+)\s*$""")
+    private val RATIO_LINE = Regex("""^\s*([\d,]+)\s*/\s*([\d,]+)\s*$""")
+
+    private fun openScreenTitle(): String =
+        Minecraft.getInstance().gui.screen()?.title?.string?.replace(COLOR_CODE_REGEX, "")?.trim() ?: "Unknown"
+
+    /** Mob entries on the currently open container page (main thread only). */
+    private fun snapshotEntries(): List<GuiMob> {
+        val player = Minecraft.getInstance().player ?: return emptyList()
+        val menu = player.containerMenu
+        if (menu === player.inventoryMenu) return emptyList()
         val entries = mutableListOf<GuiMob>()
         for (slot in menu.slots) {
             if (slot.container === player.inventory) continue
@@ -502,16 +705,100 @@ object BestiaryZoneHighlight {
                     loreText.contains("unlock it in your Bestiary", ignoreCase = true) ||
                     loreText.contains("haven't unlocked this Family", ignoreCase = true))
             if (!unlocked && !locked) continue
-            val base = name.replace(romanTier, "").trim()
+            val base = name.replace(ROMAN_TIER, "").trim()
             if (base.isEmpty() || base == "???") continue
             entries.add(GuiMob(base, name, lore, locked))
         }
+        return entries
+    }
+
+    /**
+     * The bestiary page is the ground truth for MAX and for the kill cap:
+     *
+     *     Overall Progress: 71%            Overall Progress: 100% (MAX!)
+     *                        71/100                            50/50
+     *
+     * The second number of the ratio line under "Overall Progress" is the
+     * kills needed for MAX. Persist it per mob (it overrides the NEU repo,
+     * whose caps are sometimes stale) and sync the maxed set both ways: a
+     * "(MAX!)" page marks the mob maxed, a page below the cap un-marks it.
+     */
+    private fun learnFromEntries(entries: List<GuiMob>, zoneKey: String?) {
+        if (zoneKey == null) return   // not a zone page we can attribute
+        val cfg = FamilyConfigManager.config.highlight
+        var changed = false
+        val learned = mutableListOf<String>()
+        for (e in entries) {
+            if (e.locked) continue
+            val name = scoped(zoneKey, NAME_REMAPS[e.base.lowercase()] ?: e.base)
+            val progressIdx = e.lore.indexOfFirst { it.trim().startsWith("Overall Progress") }
+            if (progressIdx < 0) continue
+            val progressLine = e.lore[progressIdx]
+            val isMax = progressLine.contains("(MAX!)") || progressLine.contains("100%")
+
+            // Ratio line: first non-blank line after "Overall Progress".
+            val ratio = e.lore.drop(progressIdx + 1).firstOrNull { it.isNotBlank() }
+                ?.let { RATIO_LINE.find(it) }
+            val cap = ratio?.groupValues?.get(2)?.replace(",", "")?.toLongOrNull()?.takeIf { it > 0 }
+            if (cap != null && cfg.bestiaryCaps[name] != cap) {
+                cfg.bestiaryCaps[name] = cap
+                learned.add("$name=$cap")
+                changed = true
+            }
+
+            if (isMax) {
+                if (cfg.maxedMobs.add(name)) changed = true
+            } else if (cfg.maxedMobs.remove(name)) {
+                FamilyAddons.LOGGER.info("BestiaryZoneHighlight: '$name' is not maxed per bestiary page — removed from maxed set")
+                changed = true
+            }
+        }
+        if (changed) {
+            FamilyConfigManager.save()
+            if (learned.isNotEmpty()) FamilyAddons.LOGGER.info("BestiaryZoneHighlight: learned caps from bestiary page: $learned")
+            // Re-apply the max filter with the corrected data if this page is
+            // the selected zone.
+            val current = currentZoneKey()
+            if (current == zoneKey) {
+                val filtered = applyMaxFilter(allZoneMobNames, persistedMaxedFor(current))
+                if (filtered != activeMobNames) activeMobNames = filtered
+                Minecraft.getInstance().execute { EntityHighlight.rescan() }
+            }
+        }
+    }
+
+    /** Silent learn pass for any open bestiary page (runs outside capture mode). */
+    private fun learnFromOpenContainer() {
+        val zoneKey = pageZoneKey(openScreenTitle()) ?: return
+        val entries = snapshotEntries()
+        if (entries.isNotEmpty()) learnFromEntries(entries, zoneKey)
+    }
+
+    /**
+     * Read the currently open container page, log every mob entry (name +
+     * lore) to config/familyaddons/bestiary_dump.txt, cross-check the names
+     * against the NEU repo + custom file, and try to match new mobs to
+     * Hypixel API kill ids by name. Appends per page.
+     */
+    fun dumpOpenContainer(silent: Boolean = false) {
+        val mc = Minecraft.getInstance()
+        val player = mc.player ?: return
+        val menu = player.containerMenu
+        if (menu === player.inventoryMenu) {
+            if (!silent) chat("§cNo container open. Use §e/fa bestiarydump§c to arm capture mode, then open §e/bestiary§c.")
+            return
+        }
+        val title = openScreenTitle()
+
+        // Snapshot on the main thread; process/fetch async.
+        val entries = snapshotEntries()
         if (entries.isEmpty()) {
             // In capture mode most menus (bestiary navigation, unrelated
             // chests) legitimately have no mob entries — stay quiet.
             if (!silent) chat("§cNo bestiary mob entries found in '$title' — open a zone's mob page.")
             return
         }
+        learnFromEntries(entries, pageZoneKey(title))
         chat("§7Read §f${entries.size}§7 mobs from '§e$title§7', cross-checking...")
 
         CompletableFuture.runAsync {
@@ -561,14 +848,8 @@ object BestiaryZoneHighlight {
                     .map { NAME_REMAPS[it.base.lowercase()] ?: it.base }
                     .toSet()
                 if (guiMaxed.isNotEmpty()) {
-                    val cfg = FamilyConfigManager.config.highlight
-                    val newMaxed = guiMaxed - cfg.maxedMobs
-                    if (newMaxed.isNotEmpty()) {
-                        cfg.maxedMobs.addAll(newMaxed)
-                        FamilyConfigManager.save()
-                        Minecraft.getInstance().execute { EntityHighlight.rescan() }
-                        FamilyAddons.LOGGER.info("BestiaryZoneHighlight: GUI dump maxed: $newMaxed")
-                    }
+                    // Persistence already happened in learnFromEntries (zone-scoped);
+                    // this is just the report.
                     sb.append("-- Maxed (read from GUI lore) --\n")
                     guiMaxed.forEach { sb.append("MAXED: $it\n") }
                     sb.append('\n')

@@ -61,9 +61,11 @@ object DtTitle {
             val plain = text.replace(COLOR_CODE_REGEX, "")
             val tw = renderer.width(plain)
 
-            // Always centered — same as 1.21.10
-            val x = ((sw - tw * scale) / 2f).toInt()
-            val y = (sh / 2f - 20f * scale).toInt()
+            // Position from the HUD editor; -1 = auto (centered, above the crosshair).
+            // Must match the preview placement in HudEditorScreen.
+            val cfg = FamilyConfigManager.config.kuudra
+            val x = if (cfg.dtTitleHudX == -1) ((sw - tw * scale) / 2f).toInt() else cfg.dtTitleHudX
+            val y = if (cfg.dtTitleHudY == -1) (sh / 2f - 20f).toInt() else cfg.dtTitleHudY
             val color = (alpha shl 24) or 0xFFFFFF
 
             val matrices = context.pose()

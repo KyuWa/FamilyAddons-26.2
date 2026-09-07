@@ -115,6 +115,18 @@ class KuudraConfig {
     @ConfigEditorColour
     var pileWaypointColor = "0:153:80:255:80"
 
+    @Expose @JvmField
+    @ConfigAccordionId(id = 3)
+    @ConfigOption(name = "Pile Beam Opacity", desc = "How see-through the pile beams are. 1 = solid.")
+    @ConfigEditorSlider(minValue = 0.05f, maxValue = 1f, minStep = 0.05f)
+    var pileBeamOpacity = 0.6f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 3)
+    @ConfigOption(name = "Pile Beam Width", desc = "Width of the pile beams. 1 = normal beacon beam.")
+    @ConfigEditorSlider(minValue = 0.2f, maxValue = 3f, minStep = 0.1f)
+    var pileBeamWidth = 1f
+
     // ── Supply Waypoints accordion (id=4) ─────────────────────
     @Expose @JvmField
     @ConfigOption(name = "Supply Waypoints", desc = "")
@@ -173,6 +185,78 @@ class KuudraConfig {
     @ConfigOption(name = "Waypoint Color", desc = "Color of the stun pod wireframe box.")
     @ConfigEditorColour
     var stunWaypointColor = "0:255:85:255:255"
+
+    // ── Fuel Phase accordion (id=9) — T1/T2 only ──────────────
+    @Expose @JvmField
+    @ConfigOption(name = "Fuel Phase (T1/T2)", desc = "")
+    @ConfigEditorAccordion(id = 9)
+    var fuelPhaseAccordion = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Ballista Pearl Waypoint", desc = "After Elle's 'Phew! The Ballista is finally ready!' in Basic/Hot Kuudra, show a pearl aim point that lands you at the Ballista in the middle of the piles.")
+    @ConfigEditorBoolean
+    var fuelPearlEnabled = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Pearl Waypoint Color", desc = "Color of the Ballista pearl aim point.")
+    @ConfigEditorColour
+    var fuelPearlColor = "0:255:255:170:0"
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Pearl Waypoint Size", desc = "Size of the Ballista pearl aim point.")
+    @ConfigEditorSlider(minValue = 0.1f, maxValue = 3.0f, minStep = 0.05f)
+    var fuelPearlSize = 0.3f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Fuel Cell Waypoints", desc = "Beacon beams over every FUEL CELL during the fuel phase.")
+    @ConfigEditorBoolean
+    var fuelCellBeamsEnabled = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Fuel Cell Beam Color", desc = "Color of the fuel cell beacon beams.")
+    @ConfigEditorColour
+    var fuelCellBeamColor = "0:153:255:85:85"
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Fuel Cell Beam Opacity", desc = "How see-through the fuel cell beams are. 1 = solid.")
+    @ConfigEditorSlider(minValue = 0.05f, maxValue = 1f, minStep = 0.05f)
+    var fuelCellBeamOpacity = 0.6f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Fuel Cell Beam Width", desc = "Width of the fuel cell beams. 1 = normal beacon beam.")
+    @ConfigEditorSlider(minValue = 0.2f, maxValue = 3f, minStep = 0.1f)
+    var fuelCellBeamWidth = 1f
+
+    // ── Kuudra Highlight accordion (id=8) ─────────────────────
+    @Expose @JvmField
+    @ConfigOption(name = "Kuudra Highlight", desc = "")
+    @ConfigEditorAccordion(id = 8)
+    var kuudraHighlightAccordion = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 8)
+    @ConfigOption(name = "Enable Kuudra Highlight", desc = "Outline Kuudra (the giant magma cube) so you can see him through walls and lava.")
+    @ConfigEditorBoolean
+    var kuudraHighlightEnabled = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 8)
+    @ConfigOption(name = "Behind Walls", desc = "Show the outline through walls. Off = only outline Kuudra when you have line of sight.")
+    @ConfigEditorBoolean
+    var kuudraHighlightBehindWalls = true
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 8)
+    @ConfigOption(name = "Outline Color", desc = "Outline color for Kuudra.")
+    @ConfigEditorColour
+    var kuudraHighlightColor = "0:255:255:85:85"
 
     // ── Gorilla Tactics Timer accordion (id=50) ───────────────
     @Expose @JvmField
@@ -299,7 +383,7 @@ class KuudraConfig {
     @Expose @JvmField
     @ConfigAccordionId(id = 11)
     @ConfigOption(name = "Waypoint Shape", desc = "Shape of the main aim-point waypoint.")
-    @ConfigEditorDropdown(values = ["AABB", "AABB Outline", "Square", "Circle"])
+    @ConfigEditorDropdown(values = ["ESP Box", "Box Outline", "Flat Square", "Flat Circle"])
     var pearlShape = 1
 
     @Expose @JvmField

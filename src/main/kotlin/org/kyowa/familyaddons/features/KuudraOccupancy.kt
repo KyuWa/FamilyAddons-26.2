@@ -55,8 +55,16 @@ object KuudraOccupancy {
         }
     }
 
+    /**
+     * Occupancy is STICKY for the run: once a pile has shown a SUPPLIES
+     * RECEIVED stand it stays occupied until Phase 1 ends. A deposited pile
+     * never becomes free again, but the stand does leave the client's entity
+     * tracking range when you are on the far side of the arena (e.g. at
+     * Square), and a rebuild-from-scratch scan then un-marked the pile and
+     * re-lit its beam. So the scan only ever adds.
+     */
     private fun scan(client: Minecraft) {
-        val world = client.level ?: run { occupied.clear(); return }
+        val world = client.level ?: return
         val newOccupied = mutableSetOf<Place>()
         for (entity in world.entitiesForRendering()) {
             if (entity !is ArmorStand) continue
@@ -78,7 +86,6 @@ object KuudraOccupancy {
             }
             if (nearest != null) newOccupied.add(nearest)
         }
-        occupied.clear()
         occupied.addAll(newOccupied)
     }
 }

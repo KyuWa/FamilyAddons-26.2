@@ -44,7 +44,8 @@ object PileWaypoints {
                 place.location.x, BEAM_BASE_Y, place.location.z,
                 BEAM_HEIGHT,
                 color[0], color[1], color[2],
-                color[3],
+                cfg.pileBeamOpacity,
+                cfg.pileBeamWidth,
             )
         }
 

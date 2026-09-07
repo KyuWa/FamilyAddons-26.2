@@ -74,6 +74,11 @@ object EntityHighlight {
                 if (stripped.isNotBlank() && zoneNames.any { matchesWithModifier(stripped, it) }) return true
             }
         }
+        // Mobs Hypixel renders without any nametag (e.g. Beeheemoth = a giant
+        // bee): matched by entity type + size from the zone's entity rules.
+        if (bestiary.zoneHighlightEnabled && entity !is ArmorStand && entity is LivingEntity) {
+            if (BestiaryZoneHighlight.matchesNameless(entity)) return true
+        }
         return false
     }
 

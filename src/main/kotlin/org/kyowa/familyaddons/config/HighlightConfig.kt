@@ -34,7 +34,7 @@ class HighlightConfig {
 
     @Expose @JvmField
     @ConfigOption(name = "Drawing Style", desc = "How to draw the highlight.")
-    @ConfigEditorDropdown(values = ["AABB", "Outline"])
+    @ConfigEditorDropdown(values = ["ESP Box", "Outline"])
     var drawingStyle = 0
 
     @Expose @JvmField
@@ -105,7 +105,7 @@ class HighlightConfig {
     @Expose @JvmField
     @ConfigAccordionId(id = 1)
     @ConfigOption(name = "Bestiary Drawing Style", desc = "How to draw the bestiary highlight.")
-    @ConfigEditorDropdown(values = ["AABB", "Outline"])
+    @ConfigEditorDropdown(values = ["ESP Box", "Outline"])
     var bestiaryDrawingStyle = 0
 
     @Expose @JvmField
@@ -136,8 +136,16 @@ class HighlightConfig {
     @Expose @JvmField
     var savedKills: MutableMap<String, Int> = mutableMapOf()
 
+    /** Maxed families, keyed "<neu zone key>/<Mob Name>" (e.g. "catacombs/Bat").
+     *  Bare legacy names are migrated by BestiaryZoneHighlight on first refresh. */
     @Expose @JvmField
     var maxedMobs: MutableSet<String> = mutableSetOf()
+
+    /** Kill count for MAX per mob, keyed like [maxedMobs], learned from the
+     *  in-game bestiary pages ("Overall Progress" → "kills/cap"). Overrides
+     *  the NEU repo cap. */
+    @Expose @JvmField
+    var bestiaryCaps: MutableMap<String, Long> = mutableMapOf()
 
     @Expose var bestiaryHudX: Int = 10
     @Expose var bestiaryHudY: Int = 10

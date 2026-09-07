@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.commands
 
 import com.mojang.brigadier.arguments.IntegerArgumentType
+import org.kyowa.familyaddons.util.DevAccess
 import org.kyowa.familyaddons.util.FaChat
 import com.mojang.brigadier.arguments.StringArgumentType
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument
@@ -11,6 +12,10 @@ import net.minecraft.network.chat.Component
 import org.kyowa.familyaddons.config.FamilyConfigManager
 import org.kyowa.familyaddons.features.AutoUpdater
 import org.kyowa.familyaddons.features.BestiaryZoneHighlight
+import org.kyowa.familyaddons.features.KuudraCrateWaypoints
+import org.kyowa.familyaddons.features.KuudraDirection
+import org.kyowa.familyaddons.features.KuudraFuelPhase
+import org.kyowa.familyaddons.features.PearlWaypoints
 import org.kyowa.familyaddons.features.NpcLocations
 import org.kyowa.familyaddons.features.Parkour
 import org.kyowa.familyaddons.features.PartyRepCheck
@@ -130,15 +135,27 @@ object TestCommand {
                                 1
                             }))
 
+                    // ── Dev-only dumps (DevAccess: hidden + rejected for everyone else) ──
+
+                    // /fa kuudra — dump Kuudra feature state (direction, pearls, crates)
+                    .then(literal("kuudra").requires { DevAccess.isDev() }.executes { ctx ->
+                        val p = Minecraft.getInstance().player ?: return@executes 1
+                        p.sendSystemMessage(Component.literal(KuudraDirection.debugDump().trimEnd()))
+                        p.sendSystemMessage(Component.literal(PearlWaypoints.debugDump().trimEnd()))
+                        p.sendSystemMessage(Component.literal(KuudraCrateWaypoints.debugDump().trimEnd()))
+                        p.sendSystemMessage(Component.literal(KuudraFuelPhase.debugDump().trimEnd()))
+                        1
+                    })
+
                     // /fa bestiarydump — toggle capture mode: while on, every /bestiary
                     // page you open is scanned and logged automatically
-                    .then(literal("bestiarydump").executes {
+                    .then(literal("bestiarydump").requires { DevAccess.isDev() }.executes {
                         BestiaryZoneHighlight.toggleCapture()
                         1
                     })
 
                     // /fa bestiaryids [filter] — dump Hypixel bestiary kill ids for custom_bestiary.json
-                    .then(literal("bestiaryids")
+                    .then(literal("bestiaryids").requires { DevAccess.isDev() }
                         .executes {
                             BestiaryZoneHighlight.dumpKillIds("")
                             1
@@ -149,8 +166,8 @@ object TestCommand {
                                 1
                             }))
 
-                    // /fa critterdump — log nearby entities + sparkle data for tuning detection
-                    .then(literal("critterdump").executes {
+                    // /fa entitydump — log nearby entities (type, size, names, gear) + sparkle data
+                    .then(literal("entitydump").requires { DevAccess.isDev() }.executes {
                         org.kyowa.familyaddons.features.SparklingCritterHighlight.dumpNearby()
                         1
                     })

@@ -19,8 +19,8 @@ class MiningConfig {
 
     @Expose @JvmField
     @ConfigAccordionId(id = 20)
-    @ConfigOption(name = "Corpse Drawing Style", desc = "ESP AABB draws a wireframe box. Outline draws around the entity model.")
-    @ConfigEditorDropdown(values = ["ESP AABB", "Outline"])
+    @ConfigOption(name = "Corpse Drawing Style", desc = "ESP Box draws a wireframe box. Outline draws around the entity model.")
+    @ConfigEditorDropdown(values = ["ESP Box", "Outline"])
     var corpseDrawingStyle = 0
 
     @Expose @JvmField

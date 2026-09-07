@@ -29,7 +29,7 @@ import org.kyowa.familyaddons.config.FamilyConfigManager
  *     particles at the critter — an entity with repeated sparkle bursts
  *     right on top of it within the last few seconds is marked.
  *
- * /fa critterdump logs nearby entities + their particle counts so the
+ * /fa entitydump logs nearby entities + their particle counts so the
  * heuristics can be tuned against the real thing.
  */
 object SparklingCritterHighlight {
@@ -157,13 +157,13 @@ object SparklingCritterHighlight {
         matrices.popPose()
     }
 
-    /** /fa critterdump — log nearby entities + sparkle data for tuning. */
+    /** /fa entitydump — log nearby entities (type, size, names, gear) + sparkle data. */
     fun dumpNearby() {
         val mc = Minecraft.getInstance()
         val player = mc.player ?: return
         val level = mc.level ?: return
         val now = System.currentTimeMillis()
-        val sb = StringBuilder("==== Critter dump @ ${java.time.LocalDateTime.now()} ====\n")
+        val sb = StringBuilder("==== Entity dump @ ${java.time.LocalDateTime.now()} ====\n")
         var count = 0
         for (e in level.entitiesForRendering()) {
             if (e === player || !e.isAlive) continue
@@ -171,6 +171,8 @@ object SparklingCritterHighlight {
             count++
             sb.append("${e.javaClass.simpleName} id=${e.id} @ ${"%.1f".format(e.x)},${"%.1f".format(e.y)},${"%.1f".format(e.z)}\n")
             sb.append("  name=${e.name.string} custom=${e.customName?.string} invisible=${e.isInvisible}\n")
+            // Type key + bounding box: what custom_bestiary.json entityType/minWidth/maxWidth match on.
+            sb.append("  type=${net.minecraft.world.entity.EntityType.getKey(e.type).path} width=${"%.2f".format(e.bbWidth)} height=${"%.2f".format(e.bbHeight)}\n")
             if (e is LivingEntity) {
                 for (slot in EquipmentSlot.entries) {
                     val stack = try { e.getItemBySlot(slot) } catch (ex: Exception) { continue }
@@ -181,10 +183,10 @@ object SparklingCritterHighlight {
         }
         sb.append("total: $count entities within 8 blocks\n\n")
         try {
-            val file = java.io.File(mc.gameDirectory, "config/familyaddons/critter_dump.txt")
+            val file = java.io.File(mc.gameDirectory, "config/familyaddons/entity_dump.txt")
             file.parentFile.mkdirs()
             file.appendText(sb.toString())
-            player.sendSystemMessage(FaChat.prefixed("§a$count entities dumped §7→ §fconfig/familyaddons/critter_dump.txt"))
+            player.sendSystemMessage(FaChat.prefixed("§a$count entities dumped §7→ §fconfig/familyaddons/entity_dump.txt"))
         } catch (e: Exception) {
             player.sendSystemMessage(FaChat.prefixed("§cDump failed: ${e.message}"))
         }

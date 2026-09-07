@@ -50,6 +50,14 @@ object AutoRequeue {
     private var inKuudraArea = false
     private var areaTicker   = AREA_POLL_TICKS
 
+    // ── Dungeon area detection ────────────────────────────────
+    // Polled from the sidebar alongside the Kuudra area. `inDungeon` above is
+    // the run-state flag (armed shortly after join, cleared at "> EXTRA STATS <")
+    // that drives the requeue; `inDungeonArea` only says "the scoreboard shows
+    // The Catacombs right now" and gates the dungeon DT title so a party `!dt`
+    // typed in Kuudra (or anywhere else) doesn't ALSO pop the dungeon title.
+    private var inDungeonArea = false
+
     // ── Kuudra state queries (used by Kuudra waypoint/ESP features) ──
     // inKuudra (chat trigger) is true from run start until "KUUDRA DOWN!";
     // inKuudraArea is true while the scoreboard/tab list says we're inside
@@ -57,6 +65,7 @@ object AutoRequeue {
     fun isInKuudra(): Boolean = inKuudra || inKuudraArea
     fun isInKuudraArea(): Boolean = inKuudraArea
     fun chatTriggerActive(): Boolean = inKuudra
+    fun isInDungeon(): Boolean = inDungeon || inDungeonArea
 
     /** 1=Basic, 2=Hot, 3=Burning, 4=Fiery, 5=Infernal (defaults to Infernal). */
     fun kuudraTierIndex(): Int = when (kuudraTier) {
@@ -83,6 +92,7 @@ object AutoRequeue {
         areaTicker             = AREA_POLL_TICKS   // re-poll on the next tick
 
         inDungeon              = false
+        inDungeonArea          = false
         dungeonNeedsDowntime.clear()
         dungeonRequeueTicks    = 0
         checkTicksRemaining    = -1
@@ -129,6 +139,14 @@ object AutoRequeue {
             kuudraWaitTicks   = 0
         }
         inKuudraArea = nowInArea
+
+        inDungeonArea = !nowInArea && detectDungeonArea(client)
+    }
+
+    /** Sidebar shows "The Catacombs" while inside a dungeon instance. */
+    private fun detectDungeonArea(client: Minecraft): Boolean {
+        if (client.level == null) return false
+        return DevTools.getScoreboardLines(client).any { it.contains("The Catacombs", ignoreCase = true) }
     }
 
     /** Sidebar "Kuudra's Hollow (T#)" (also updates the tier) or tab "Area: Kuudra". */
@@ -220,7 +238,7 @@ object AutoRequeue {
             val msg  = partyMatch.groupValues[2].trim().lowercase()
 
             if (msg == "!dt" || msg == "dt" || msg.startsWith("!dt")) {
-                if (inKuudra) {
+                if (isInKuudra()) {
                     if (config.dtTitle) DtTitle.show("${TestCommand.getFormattedName(name)} §crequested §fDT!")
                     kuudraCancelRequeue = true
                     kuudraDtRequester   = name
@@ -231,7 +249,7 @@ object AutoRequeue {
             }
 
             if (msg == "!undt" || msg == "undt") {
-                if (inKuudra) {
+                if (isInKuudra()) {
                     if (config.dtTitle) DtTitle.show("${TestCommand.getFormattedName(name)} §acancelled §fDT!")
                     kuudraCancelRequeue   = false
                     kuudraDtRequester     = null
@@ -311,6 +329,9 @@ object AutoRequeue {
             }
 
             if (msg == "!dt" || msg == "dt" || msg.startsWith("!dt")) {
+                // Only react inside a dungeon — otherwise a Kuudra `!dt` would
+                // show both the Kuudra and the dungeon title at once.
+                if (!isInDungeon()) return
                 if (config.dtTitle) DungeonDtTitle.show("${TestCommand.getFormattedName(name)} §crequested §fDT!")
                 dungeonNeedsDowntime.add(name)
                 return

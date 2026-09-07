@@ -119,6 +119,15 @@ object PearlWaypoints {
             true
         }
 
+        // The grab progress bar advances on SERVER ticks, so the throw-window
+        // countdown has to count the same clock. Hypixel's per-tick ping packet
+        // (ServerTickTracker) stops arriving while the server lags, which
+        // pauses the countdown exactly like the grab bar pauses — a client
+        // tick counter kept running at 20 Hz and called "NOW" too early.
+        ServerTickTracker.onTick {
+            if (grabbing) tickCount++
+        }
+
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             Prio.useNewPrio = FamilyConfigManager.config.kuudra.pearlNewPrio
 
@@ -126,8 +135,6 @@ object PearlWaypoints {
                 if (grabbing) clearGrab()
                 if (MissingSupplies.missing.isNotEmpty()) MissingSupplies.clear()
             }
-
-            if (grabbing) tickCount++
 
             // Check NOW sound trigger every tick during a grab.
             if (grabbing && !nowSoundPlayed) {
@@ -397,7 +404,15 @@ object PearlWaypoints {
 
     // ── Shape drawing ──────────────────────────────────────────────────
 
-    private fun drawWaypoint(
+    /**
+     * Pearl aim-point marker. Shapes (index = config dropdown):
+     *  0 ESP Box      - translucent filled cube + outline
+     *  1 Box Outline  - wireframe cube only
+     *  2 Flat Square  - translucent horizontal square + outline at the aim height
+     *  3 Flat Circle  - translucent horizontal disc + outline at the aim height
+     * Every shape is drawn depth-tested, then again faintly through walls.
+     */
+    internal fun drawWaypoint(
         matrices: PoseStack,
         collector: SubmitNodeCollector,
         pos: Vec3,
@@ -405,48 +420,85 @@ object PearlWaypoints {
         size: Double,
         shape: Int,
     ) {
-        val r = color[0]; val g = color[1]; val b = color[2]; val a = color[3]
         val half = size.coerceAtLeast(0.05) / 2.0
         when (shape) {
-            0, 1 -> {
-                val box = AABB(
-                    pos.x - half, pos.y - half, pos.z - half,
-                    pos.x + half, pos.y + half, pos.z + half
-                )
-                collector.submitCustomGeometry(matrices, FamilyRenderTypes.LINES) { pose, buf ->
-                    boxEdges(buf, pose, box, r, g, b, a)
-                }
-                collector.submitCustomGeometry(matrices, FamilyRenderTypes.LINES_NO_DEPTH) { pose, buf ->
-                    boxEdges(buf, pose, box, r, g, b, a * 0.3f)
-                }
-            }
-            2 -> drawHorizontalSquare(matrices, collector, pos, half, color)
-            3 -> drawHorizontalCircle(matrices, collector, pos, half, color)
+            0 -> { drawFilledBox(matrices, collector, pos, half, color); drawBoxOutline(matrices, collector, pos, half, color) }
+            1 -> drawBoxOutline(matrices, collector, pos, half, color)
+            2 -> drawFlatSquare(matrices, collector, pos, half, color)
+            3 -> drawFlatCircle(matrices, collector, pos, half, color)
+            else -> drawBoxOutline(matrices, collector, pos, half, color)
         }
     }
 
-    private fun drawHorizontalSquare(
-        matrices: PoseStack,
-        collector: SubmitNodeCollector,
-        center: Vec3,
-        half: Double,
-        color: FloatArray,
+    /** Alpha of the filled faces relative to the configured colour alpha. */
+    private const val FILL_ALPHA = 0.35f
+
+    private fun drawBoxOutline(
+        matrices: PoseStack, collector: SubmitNodeCollector,
+        pos: Vec3, half: Double, color: FloatArray,
     ) {
         val r = color[0]; val g = color[1]; val b = color[2]; val a = color[3]
-        val cx = center.x.toFloat(); val cy = center.y.toFloat(); val cz = center.z.toFloat()
-        val h = half.toFloat()
-        fun emit(renderType: RenderType, alpha: Float) {
+        val box = AABB(pos.x - half, pos.y - half, pos.z - half, pos.x + half, pos.y + half, pos.z + half)
+        collector.submitCustomGeometry(matrices, FamilyRenderTypes.LINES) { pose, buf ->
+            boxEdges(buf, pose, box, r, g, b, a)
+        }
+        collector.submitCustomGeometry(matrices, FamilyRenderTypes.LINES_NO_DEPTH) { pose, buf ->
+            boxEdges(buf, pose, box, r, g, b, a * 0.3f)
+        }
+    }
+
+    private fun drawFilledBox(
+        matrices: PoseStack, collector: SubmitNodeCollector,
+        pos: Vec3, half: Double, color: FloatArray,
+    ) {
+        val r = color[0]; val g = color[1]; val b = color[2]; val a = color[3] * FILL_ALPHA
+        val x1 = (pos.x - half).toFloat(); val y1 = (pos.y - half).toFloat(); val z1 = (pos.z - half).toFloat()
+        val x2 = (pos.x + half).toFloat(); val y2 = (pos.y + half).toFloat(); val z2 = (pos.z + half).toFloat()
+        collector.submitCustomGeometry(matrices, FamilyRenderTypes.BEAM) { pose, buf ->
+            fun q(ax: Float, ay: Float, az: Float, bx: Float, by: Float, bz: Float, cx: Float, cy: Float, cz: Float, dx: Float, dy: Float, dz: Float) {
+                buf.addVertex(pose, ax, ay, az).setColor(r, g, b, a)
+                buf.addVertex(pose, bx, by, bz).setColor(r, g, b, a)
+                buf.addVertex(pose, cx, cy, cz).setColor(r, g, b, a)
+                buf.addVertex(pose, dx, dy, dz).setColor(r, g, b, a)
+            }
+            // Both windings so the box is visible from inside and outside (the quad pipeline culls).
+            q(x1,y1,z1, x2,y1,z1, x2,y2,z1, x1,y2,z1); q(x1,y2,z1, x2,y2,z1, x2,y1,z1, x1,y1,z1) // -z
+            q(x1,y1,z2, x1,y2,z2, x2,y2,z2, x2,y1,z2); q(x2,y1,z2, x2,y2,z2, x1,y2,z2, x1,y1,z2) // +z
+            q(x1,y1,z1, x1,y2,z1, x1,y2,z2, x1,y1,z2); q(x1,y1,z2, x1,y2,z2, x1,y2,z1, x1,y1,z1) // -x
+            q(x2,y1,z1, x2,y1,z2, x2,y2,z2, x2,y2,z1); q(x2,y2,z1, x2,y2,z2, x2,y1,z2, x2,y1,z1) // +x
+            q(x1,y1,z1, x1,y1,z2, x2,y1,z2, x2,y1,z1); q(x2,y1,z1, x2,y1,z2, x1,y1,z2, x1,y1,z1) // -y
+            q(x1,y2,z1, x2,y2,z1, x2,y2,z2, x1,y2,z2); q(x1,y2,z2, x2,y2,z2, x2,y2,z1, x1,y2,z1) // +y
+        }
+    }
+
+    /** Horizontal ring of [pts] (closed) at height [cy]: filled fan + outline. */
+    private fun drawFlatPolygon(
+        matrices: PoseStack, collector: SubmitNodeCollector,
+        cx: Float, cy: Float, cz: Float, pts: List<Pair<Float, Float>>, color: FloatArray,
+    ) {
+        val r = color[0]; val g = color[1]; val b = color[2]; val a = color[3]
+
+        // Fill: one quad per edge (centre, p[i], p[i+1], centre), both windings.
+        val fa = a * FILL_ALPHA
+        collector.submitCustomGeometry(matrices, FamilyRenderTypes.BEAM) { pose, fill ->
+            for (i in 0 until pts.size - 1) {
+                val (x0, z0) = pts[i]; val (x1, z1) = pts[i + 1]
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, fa)
+                fill.addVertex(pose, x0, cy, z0).setColor(r, g, b, fa)
+                fill.addVertex(pose, x1, cy, z1).setColor(r, g, b, fa)
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, fa)
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, fa)
+                fill.addVertex(pose, x1, cy, z1).setColor(r, g, b, fa)
+                fill.addVertex(pose, x0, cy, z0).setColor(r, g, b, fa)
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, fa)
+            }
+        }
+
+        // Outline, depth-tested then faint through walls.
+        fun edges(renderType: RenderType, alpha: Float) {
             collector.submitCustomGeometry(matrices, renderType) { pose, buf ->
-                val pts = arrayOf(
-                    Pair(cx - h, cz - h),
-                    Pair(cx + h, cz - h),
-                    Pair(cx + h, cz + h),
-                    Pair(cx - h, cz + h),
-                    Pair(cx - h, cz - h),
-                )
                 for (i in 0 until pts.size - 1) {
-                    val (x0, z0) = pts[i]
-                    val (x1, z1) = pts[i + 1]
+                    val (x0, z0) = pts[i]; val (x1, z1) = pts[i + 1]
                     val dx = x1 - x0; val dz = z1 - z0
                     val len = sqrt((dx * dx + dz * dz).toDouble()).toFloat().coerceAtLeast(1e-4f)
                     buf.addVertex(pose, x0, cy, z0).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len).setLineWidth(2.0f)
@@ -454,39 +506,31 @@ object PearlWaypoints {
                 }
             }
         }
-        emit(FamilyRenderTypes.LINES, a)
-        emit(FamilyRenderTypes.LINES_NO_DEPTH, a * 0.3f)
+        edges(FamilyRenderTypes.LINES, a)
+        edges(FamilyRenderTypes.LINES_NO_DEPTH, a * 0.3f)
     }
 
-    private fun drawHorizontalCircle(
-        matrices: PoseStack,
-        collector: SubmitNodeCollector,
-        center: Vec3,
-        radius: Double,
-        color: FloatArray,
+    private fun drawFlatSquare(
+        matrices: PoseStack, collector: SubmitNodeCollector,
+        center: Vec3, half: Double, color: FloatArray,
     ) {
-        val r = color[0]; val g = color[1]; val b = color[2]; val a = color[3]
+        val cx = center.x.toFloat(); val cy = center.y.toFloat(); val cz = center.z.toFloat()
+        val h = half.toFloat()
+        val pts = listOf(cx - h to cz - h, cx + h to cz - h, cx + h to cz + h, cx - h to cz + h, cx - h to cz - h)
+        drawFlatPolygon(matrices, collector, cx, cy, cz, pts, color)
+    }
+
+    private fun drawFlatCircle(
+        matrices: PoseStack, collector: SubmitNodeCollector,
+        center: Vec3, radius: Double, color: FloatArray,
+    ) {
         val cx = center.x.toFloat(); val cy = center.y.toFloat(); val cz = center.z.toFloat()
         val segments = 32
-        fun emit(renderType: RenderType, alpha: Float) {
-            collector.submitCustomGeometry(matrices, renderType) { pose, buf ->
-                val twoPi = (Math.PI * 2.0).toFloat()
-                var prevX = (cx + radius).toFloat()
-                var prevZ = cz
-                for (i in 1..segments) {
-                    val angle = twoPi * i / segments
-                    val nx = (cx + radius * Math.cos(angle.toDouble())).toFloat()
-                    val nz = (cz + radius * Math.sin(angle.toDouble())).toFloat()
-                    val dx = nx - prevX; val dz = nz - prevZ
-                    val len = sqrt((dx * dx + dz * dz).toDouble()).toFloat().coerceAtLeast(1e-4f)
-                    buf.addVertex(pose, prevX, cy, prevZ).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len).setLineWidth(2.0f)
-                    buf.addVertex(pose, nx, cy, nz).setColor(r, g, b, alpha).setNormal(pose, dx / len, 0f, dz / len).setLineWidth(2.0f)
-                    prevX = nx; prevZ = nz
-                }
-            }
+        val pts = (0..segments).map { i ->
+            val angle = Math.PI * 2.0 * i / segments
+            (cx + radius * Math.cos(angle)).toFloat() to (cz + radius * Math.sin(angle)).toFloat()
         }
-        emit(FamilyRenderTypes.LINES, a)
-        emit(FamilyRenderTypes.LINES_NO_DEPTH, a * 0.3f)
+        drawFlatPolygon(matrices, collector, cx, cy, cz, pts, color)
     }
 
     private fun drawLabel(
