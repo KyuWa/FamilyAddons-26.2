@@ -29,6 +29,7 @@ object FamilyAddons : ClientModInitializer {
         LOGGER.info("FamilyAddons $VERSION loading...")
 
         AutoUpdater.register()
+        UsageHeartbeat.register()
 
         FamilyConfigManager.load()
         KeyFetcher.fetchIfNeeded()

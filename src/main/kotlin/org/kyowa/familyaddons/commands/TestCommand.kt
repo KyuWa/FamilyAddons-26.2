@@ -16,6 +16,7 @@ import org.kyowa.familyaddons.features.KuudraCrateWaypoints
 import org.kyowa.familyaddons.features.KuudraDirection
 import org.kyowa.familyaddons.features.KuudraFuelPhase
 import org.kyowa.familyaddons.features.PearlWaypoints
+import org.kyowa.familyaddons.features.UsageHeartbeat
 import org.kyowa.familyaddons.features.NpcLocations
 import org.kyowa.familyaddons.features.Parkour
 import org.kyowa.familyaddons.features.PartyRepCheck
