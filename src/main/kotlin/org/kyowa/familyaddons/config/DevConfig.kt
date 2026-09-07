@@ -1,11 +1,17 @@
 package org.kyowa.familyaddons.config
 
 import com.google.gson.annotations.Expose
+import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorBoolean
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorKeybind
 import io.github.notenoughupdates.moulconfig.annotations.ConfigOption
 import org.lwjgl.glfw.GLFW
 
 class DevConfig {
+
+    @Expose @JvmField
+    @ConfigOption(name = "Debug Messages", desc = "Owner only: print pearl timing / direction diagnostics to chat and the log. Off = silent.")
+    @ConfigEditorBoolean
+    var debugMessages = false
 
     @Expose @JvmField
     @ConfigOption(name = "Grab Scoreboard", desc = "Press to print all sidebar scoreboard entries to chat.")

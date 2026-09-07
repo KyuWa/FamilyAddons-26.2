@@ -111,24 +111,45 @@ object PearlCalculator {
         return (a + b) * 0.5
     }
 
+    // ── Exact per-tick simulation ──────────────────────────────────────
+    // Hypixel simulates the pearl like 1.8 EntityThrowable, per server tick:
+    //   pos += v ; v *= 0.99 ; v.y -= 0.03      (speed 1.5, spawn eye - 0.1)
+    // The old closed-form pitch search ignored horizontal drag when it timed
+    // the throw, which lands the real pearl short: 0.6 blocks at 12 blocks,
+    // 2-3 blocks at 20-25 (checked against this simulation 2026-09-07). So
+    // the pitch is now found by bisection on the simulated trajectory itself:
+    // for a given pitch, march the pearl until it crosses the target's
+    // horizontal distance and compare its height there with the target's.
+    private const val MAX_TICKS = 300
+
+    /** Height (relative to spawn) and fractional tick when the pearl crosses [horizontalDist], or null if it never gets there. */
+    private fun heightAtDistance(pitchDeg: Double, horizontalDist: Double): Pair<Double, Double>? {
+        val p = Math.toRadians(pitchDeg)
+        var vh = THROW_SPEED * cos(p)
+        var vy = THROW_SPEED * sin(p)
+        var x = 0.0; var y = 0.0
+        var prevX = 0.0; var prevY = 0.0
+        for (t in 1..MAX_TICKS) {
+            x += vh; y += vy
+            vh *= 0.99; vy = vy * 0.99 - 0.03
+            if (x >= horizontalDist) {
+                val f = if (x != prevX) (horizontalDist - prevX) / (x - prevX) else 1.0
+                return Pair(prevY + f * (y - prevY), (t - 1) + f)
+            }
+            if (y < -400.0) return null
+            prevX = x; prevY = y
+        }
+        return null
+    }
+
     /**
      * Returns Pair(lookDirectionUnitVector, flightTimeTicks).
      *
-     * Primary path: 50-iteration pitch bisection.
-     *   - Pitch range: highArc ? [45°, 89°] : [-89°, 45°]
-     *   - For each midpoint pitch, compute predicted Y at horizontalDist:
-     *       t = horizontalDist / vx_horizontal
-     *       predY = (1 - exp(-DRAG*t)) * vy / DRAG  +  acceleration.y * t / DRAG
-     *   - Compare predY to actual displacement.y:
-     *       predY >= dy → throw goes too high → cap upper bound at midpoint
-     *       predY <  dy → throw goes too low  → raise lower bound at midpoint
-     *   - The convergenceFlag is set whenever predY >= dy is hit, and the
-     *     last such pitch+time become the solution.
-     *
-     * Fallback path: golden-section minimization on
-     *     f(t) = | |velocityGivenTime(t, displacement)|² − squaredSpeed |
-     * over t ∈ highArc ? [35, 120] : [1e-6, 60]. Solution velocity gives look dir;
-     * solution time is t.
+     * Low arc: pitch in [-89, 45] — the height reached at the target distance
+     * rises monotonically with pitch, bisect for height == dy.
+     * High arc: pitch in [45, 89] — height falls with pitch (the pearl runs
+     * out of range), bisect the other way. A pitch that never reaches the
+     * target counts as "too low".
      */
     private fun findLookDirAndTime(
         pos: Vec3,
@@ -137,62 +158,42 @@ object PearlCalculator {
     ): Pair<Vec3, Double> {
         val displacement = target.subtract(pos)
         val dy = displacement.y
-        val horizontalDist = sqrt(
-            displacement.x * displacement.x + displacement.z * displacement.z
-        )
+        val horizontalDist = sqrt(displacement.x * displacement.x + displacement.z * displacement.z)
 
         var lo = if (highArc) 45.0 else -89.0
         var hi = if (highArc) 89.0 else 45.0
-        var lastPitchDeg = 0.0
-        var lastTimeTicks = 0.0
-        var converged = false
+        var bestPitch = (lo + hi) / 2.0
+        var bestTime = 0.0
+        var bestErr = Double.MAX_VALUE
 
-        repeat(50) {
-            val pitchMidDeg = (lo + hi) / 2.0
-            val pitchRad = Math.toRadians(pitchMidDeg)
-            val vxHoriz = THROW_SPEED * cos(pitchRad)
-            val vy = THROW_SPEED * sin(pitchRad)
-
-            // Time to reach target horizontally — naive (no horizontal drag correction).
-            val t = if (vxHoriz > 1e-12) horizontalDist / vxHoriz else 1e9
-
-            val dragFactor = 1.0 - exp(-DRAG * t)
-            val riseFromVy = (dragFactor * vy) / DRAG
-            val gravityDrop = (acceleration.y * t) / DRAG
-            val predY = riseFromVy + gravityDrop
-
-            if (predY >= dy) {
-                hi = pitchMidDeg
-                lastPitchDeg = pitchMidDeg
-                lastTimeTicks = t
-                converged = true
+        repeat(40) {
+            val mid = (lo + hi) / 2.0
+            val hit = heightAtDistance(mid, horizontalDist)
+            val h = hit?.first ?: -1e9
+            val err = abs(h - dy)
+            if (hit != null && err < bestErr) { bestErr = err; bestPitch = mid; bestTime = hit.second }
+            val tooHigh = h >= dy
+            if (highArc) {
+                // Steeper = shorter = lower at the target distance.
+                if (tooHigh) lo = mid else hi = mid
             } else {
-                lo = pitchMidDeg
+                if (tooHigh) hi = mid else lo = mid
             }
         }
 
-        // Compute yaw from displacement (always, regardless of convergence).
-        val yawRad = atan2(displacement.x, displacement.z)
-
-        if (converged) {
-            val pitchRad = Math.toRadians(lastPitchDeg)
-            val lookDir = Vec3(
-                -sin(yawRad) * cos(pitchRad),
-                -sin(pitchRad),
-                cos(yawRad) * cos(pitchRad),
-            ).normalize()
-            return Pair(lookDir, lastTimeTicks)
-        }
-
-        // Fallback: golden-section minimize on velocity magnitude.
-        val (tLo, tHi) = if (highArc) Pair(35.0, 120.0) else Pair(1e-6, 60.0)
-        val f: (Double) -> Double = { t ->
-            val v = velocityGivenTime(t, displacement)
-            abs(v.lengthSqr() - squaredSpeed)
-        }
-        val tMin = minimizeScalarBounded(f, tLo, tHi)
-        val velocity = velocityGivenTime(tMin, displacement)
-        return Pair(velocity.normalize(), tMin)
+        // Physical launch direction: horizontal unit vector towards the
+        // target, tilted up by the solved pitch (y up = positive). The
+        // formula the old never-converging branch carried flipped y and
+        // mirrored x, which is why 20:12's build aimed at the wrong spot.
+        val pitchRad = Math.toRadians(bestPitch)
+        val hx = if (horizontalDist > 1e-9) displacement.x / horizontalDist else 0.0
+        val hz = if (horizontalDist > 1e-9) displacement.z / horizontalDist else 1.0
+        val lookDir = Vec3(
+            hx * cos(pitchRad),
+            sin(pitchRad),
+            hz * cos(pitchRad),
+        ).normalize()
+        return Pair(lookDir, bestTime)
     }
 
     /**
@@ -215,10 +216,12 @@ object PearlCalculator {
         val horizontalDist = hypot(dest.x - spawnPos.x, dest.z - spawnPos.z)
         if (horizontalDist <= 1.0) return null
 
-        val (lookDir, timeTicks) = findLookDirAndTime(spawnPos, dest, highArc)
+        // Pearl spawns 0.1 below the eye (EntityThrowable / ThrowableProjectile).
+        val launch = Vec3(spawnPos.x, spawnPos.y - 0.1, spawnPos.z)
+        val (lookDir, timeTicks) = findLookDirAndTime(launch, dest, highArc)
 
         val aimDist = if (highArc) HIGH_DIST else LOW_DIST
-        val aimPoint = spawnPos.add(lookDir.scale(aimDist))
+        val aimPoint = eyePos.add(lookDir.scale(aimDist))
 
         val yawDeg = Math.toDegrees(atan2(-lookDir.x, lookDir.z))
         val pitchDeg = Math.toDegrees(asin(-lookDir.y))

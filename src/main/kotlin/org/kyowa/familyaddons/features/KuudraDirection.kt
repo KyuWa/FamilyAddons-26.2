@@ -62,7 +62,20 @@ object KuudraDirection {
 
     private fun cfg() = FamilyConfigManager.config.kuudra
 
-    fun getScale() = cfg().directionScale.toFloatOrNull()?.coerceAtLeast(0.5f) ?: 2f
+    /**
+     * Scale comes from the config slider; the HUD editor writes the same
+     * value back through [directionScale] so both stay in sync.
+     */
+    fun getScale(): Float = cfg().directionScaleSlider.coerceIn(0.5f, 8f)
+
+    private fun textColor(): Int {
+        val c = cfg()
+        if (!c.directionCustomColor) return directionColor
+        return try {
+            val p = c.directionColor.split(":")
+            (p[2].toInt() shl 16) or (p[3].toInt() shl 8) or p[4].toInt()
+        } catch (e: Exception) { 0xFFFF55 }
+    }
 
     private fun reset() {
         direction = null
@@ -104,14 +117,22 @@ object KuudraDirection {
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, _ ->
             val plain = message.string.replace(COLOR_CODE_REGEX, "").trim()
             when (plain) {
-                RUN_START_MSG  -> reset()
-                FIGHT_OVER_MSG -> skip = true
+                RUN_START_MSG -> reset()
+                // "KUUDRA DOWN!" ends the run. Elle's "POW! SURELY THAT'S IT!"
+                // is NOT the end: it fires when the last pod is destroyed, right
+                // BEFORE Kuudra surfaces for the DPS phase — i.e. right before
+                // the HP window this feature keys on. Treating it as "fight
+                // over" (as the original port did) disabled the callout exactly
+                // when it was needed.
+                "KUUDRA DOWN!" -> skip = true
             }
             true
         }
 
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             if (!cfg().directionEnabled) return@register
+            // Only Infernal (T5) has the surfacing mechanic this reads.
+            if (AutoRequeue.kuudraTierIndex() != 5) return@register
 
             if (skip) {
                 if (direction != null) { direction = null; showUntil = -1L }
@@ -133,6 +154,9 @@ object KuudraDirection {
             if (!isSurfacing(kuudra)) return@register
 
             val (text, color) = directionFor(kuudra.x, kuudra.z) ?: return@register
+            if ((direction != text || now - lastDetectMs > HOLD_MS) && org.kyowa.familyaddons.util.DevAccess.debug()) {
+                org.kyowa.familyaddons.FamilyAddons.LOGGER.info("KuudraDirection: $text (hp=${"%.0f".format(kuudra.health)} @ ${"%.1f".format(kuudra.x)}, ${"%.1f".format(kuudra.z)})")
+            }
             direction = text
             directionColor = color
             showUntil = now + HOLD_MS
@@ -145,12 +169,13 @@ object KuudraDirection {
                 if (!cfg().directionEnabled) return@HudElement
                 val text = direction ?: return@HudElement
                 if (System.currentTimeMillis() >= showUntil) return@HudElement
-                val color = directionColor
+                val color = textColor()
 
                 val client = Minecraft.getInstance()
                 val tr = client.font
                 val scale = getScale()
-                val tw = tr.width(text)
+                val component = Component.literal(text).withStyle { it.withBold(cfg().directionBold) }
+                val tw = tr.width(component)
 
                 val x = if (cfg().directionHudX == -1)
                     ((context.guiWidth() - tw * scale) / 2f).toInt()
@@ -163,7 +188,7 @@ object KuudraDirection {
                 matrices.pushMatrix()
                 matrices.translate(x.toFloat(), y.toFloat())
                 matrices.scale(scale, scale)
-                context.text(tr, Component.literal(text), 0, 0, (0xFF shl 24) or color, true)
+                context.text(tr, component, 0, 0, (0xFF shl 24) or color, true)
                 matrices.popMatrix()
             }
         )

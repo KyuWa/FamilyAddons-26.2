@@ -40,6 +40,6 @@ public class ServerTickPacketMixin {
         // Only count Hypixel's server-tick pings (negative parameter).
         if (packet.getId() >= 0) return;
 
-        ServerTickTracker.INSTANCE.onServerTick();
+        ServerTickTracker.INSTANCE.onServerTick(packet.getId());
     }
 }

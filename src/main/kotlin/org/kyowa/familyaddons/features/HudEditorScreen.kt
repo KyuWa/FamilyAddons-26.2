@@ -228,6 +228,7 @@ class HudEditorScreen : Screen(Component.literal("FA HUD Editor")) {
                 FamilyConfigManager.config.kuudra.directionHudX = elem.x
                 FamilyConfigManager.config.kuudra.directionHudY = elem.y
                 FamilyConfigManager.config.kuudra.directionScale = "%.1f".format(elem.scale)
+                FamilyConfigManager.config.kuudra.directionScaleSlider = elem.scale.coerceIn(1f, 6f)
             },
             renderContent = { ctx, _ ->
                 ctx.text(tr, Component.literal(KuudraDirection.PREVIEW_TEXT), 0, 0, 0xFF00AA00.toInt(), true)

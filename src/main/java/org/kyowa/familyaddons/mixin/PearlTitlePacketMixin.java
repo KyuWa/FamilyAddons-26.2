@@ -2,6 +2,9 @@ package org.kyowa.familyaddons.mixin;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import org.kyowa.familyaddons.features.PearlWaypoints;
 import org.spongepowered.asm.mixin.Mixin;
@@ -11,31 +14,40 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Reads Hypixel's progress title (`[some prefix] XX%`) from the incoming
- * set-title packet. 26.2 moved title state out of {@code Gui} (the old
- * {@code Gui#extractTitle}/{@code Gui#title} pair is gone), so the packet
- * handler is the stable hook now. Same main-thread guard as the other packet
- * mixins — handlers run twice per packet (netty thread, then re-scheduled on
- * the main thread). Deduplicates per identical title text so the parse logic
- * fires once per unique title.
+ * Feeds the Kuudra grab progress text ("[prefix] XX%") to PearlWaypoints.
+ *
+ * 26.2 keeps title state out of Gui, so the packet handlers are the hook:
+ * title, subtitle and action bar are all read, wherever the server puts the
+ * bar. Same main-thread guard as the other packet mixins (handlers run on
+ * the netty thread first, then again on the main thread). Deduplicated per
+ * identical text so the parser fires once per distinct message.
  */
 @Mixin(ClientPacketListener.class)
 public class PearlTitlePacketMixin {
 
-    @Unique private String fa$lastTitleText = "";
+    @Unique private String fa$lastText = "";
 
-    @Inject(method = "setTitleText", at = @At("HEAD"))
-    private void familyaddons$onTitle(ClientboundSetTitleTextPacket packet, CallbackInfo ci) {
+    @Unique
+    private void fa$feed(Component c) {
         try {
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || !mc.isSameThread()) return;
-            String raw = packet.text().getString();
-            if (raw == null || raw.isEmpty()) return;
-            if (raw.equals(fa$lastTitleText)) return;
-            fa$lastTitleText = raw;
+            if (c == null) return;
+            String raw = c.getString();
+            if (raw == null || raw.isEmpty() || raw.equals(fa$lastText)) return;
+            fa$lastText = raw;
             PearlWaypoints.INSTANCE.onTitle(raw);
         } catch (Throwable ignored) {
-            // Never let this propagate — would break packet handling.
+            // Never let this propagate; it would break packet handling.
         }
     }
+
+    @Inject(method = "setTitleText", at = @At("HEAD"))
+    private void familyaddons$onTitle(ClientboundSetTitleTextPacket packet, CallbackInfo ci) { fa$feed(packet.text()); }
+
+    @Inject(method = "setSubtitleText", at = @At("HEAD"))
+    private void familyaddons$onSubtitle(ClientboundSetSubtitleTextPacket packet, CallbackInfo ci) { fa$feed(packet.text()); }
+
+    @Inject(method = "setActionBarText", at = @At("HEAD"))
+    private void familyaddons$onActionBar(ClientboundSetActionBarTextPacket packet, CallbackInfo ci) { fa$feed(packet.text()); }
 }

@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.kyowa.familyaddons.COLOR_CODE_REGEX
+import org.kyowa.familyaddons.FamilyAddons
 import org.kyowa.familyaddons.config.FamilyConfigManager
 import org.kyowa.familyaddons.features.pearl.DoublePearls
 import org.kyowa.familyaddons.features.pearl.MissingSupplies
@@ -22,6 +23,7 @@ import org.kyowa.familyaddons.features.pearl.Place
 import org.kyowa.familyaddons.features.pearl.Pre
 import org.kyowa.familyaddons.features.pearl.Prio
 import org.lwjgl.opengl.GL11
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -83,25 +85,140 @@ object PearlWaypoints {
         return true
     }
 
+    // ── Timing ground truth (debug) ────────────────────────────────────
+    // Server ticks between the 0% and 100% grab titles, against the table
+    // value we count down from. If these disagree the NOW moment is off by
+    // exactly that difference; /fa kuudra prints both.
+    @Volatile private var lastGrabTicks: Int = -1
+    @Volatile private var lastGrabExpectedTicks: Int = -1
+    @Volatile private var lastGrabTps: Double = -1.0
+
+    // ── Grab length model ──────────────────────────────────────────────
+    // The pawsup table is only a first guess: measured on 2026-09-07 a
+    // Burning/T3-tali grab took 86-87 of our ticks against a table value of
+    // 70, which fired NOW ~0.8 s early. So the total is now, in priority:
+    //   1. live projection from the progress bar (elapsed * 100 / pct) once
+    //      the bar is past LIVE_MIN_PCT — this also absorbs server lag;
+    //   2. the duration measured on the previous grab at this tier/talisman;
+    //   3. the table.
+    private const val LIVE_MIN_PCT = 15
+    @Volatile private var estGrabTicks: Int = -1
+
+    // Wall-clock alongside ticks, to tell whether Hypixel's pickup runs on
+    // ticks or on real time (they differ during lag catch-up bursts).
+    @Volatile private var grabStartMs: Long = 0L
+    @Volatile private var lastFinishTick: Int = -1
+    @Volatile private var lastFinishMs: Long = 0L
+    @Volatile private var lastFinishExpectedTick: Int = -1
+
+    private fun learnedKey() = "${AutoRequeue.kuudraTierIndex()}/${FamilyConfigManager.config.kuudra.pearlTalismanTier}"
+
+    /** Total grab length in our tick units, best current estimate. */
+    private fun grabTotalTicks(): Int {
+        if (estGrabTicks > 0) return estGrabTicks
+        FamilyConfigManager.config.kuudra.pearlLearnedGrabTicks[learnedKey()]?.let { if (it > 0) return it }
+        return (getMaxTimeMs() / 50L).toInt()
+    }
+
+    // Measured 2026-09-07: the pickup is a fixed 105 ticks at Infernal while
+    // its wall time varied 4.26-4.59 s, i.e. the ping stream IS the server's
+    // tick stream (~23-24/s on Hypixel) and the pearl is simulated on that
+    // same clock, so the solver's flight ticks need no scaling.
+
+    /** Ticks left until the pearl must be thrown; <= 0 means NOW. */
+    private fun remainingTicks(flightTimeMs: Long, isDoublePearl: Boolean): Int {
+        val cfg = FamilyConfigManager.config.kuudra
+        val elapsed = (tickCount - grabStartTick).coerceAtLeast(0)
+        val flight = Math.round(flightTimeMs / 50.0).toInt()
+        val delay = (cfg.pearlTimerDelay.toLong() / 50L).toInt()
+        val reaction = (cfg.pearlReactionMs.toLong() / 50L).toInt()
+        val dDelay = if (isDoublePearl) (cfg.pearlDPearlLandDelay.toLong() / 50L).toInt() else 0
+        return grabTotalTicks() + dDelay - elapsed - flight + delay - reaction
+    }
+
     fun onTitle(rawTitle: String) {
         val plain = rawTitle.replace(COLOR_CODE_REGEX, "")
         val match = PROGRESS_REGEX.find(plain) ?: return
         val pct = match.groupValues[1].toIntOrNull() ?: return
         when {
-            pct == 0 -> {
+            pct == 0 && !grabbing -> {
                 grabbing = true
                 grabStartTick = tickCount
+                grabStartMs = System.currentTimeMillis()
                 nowSoundPlayed = false
+                estGrabTicks = -1
+                devLog("PearlWaypoints: grab started (title '$plain'), table ${getMaxTimeMs() / 50L} ticks, using ${grabTotalTicks()}")
+                devChat("§7Grab started, expecting §e${grabTotalTicks()}§7 ticks §8(table ${getMaxTimeMs() / 50L})")
             }
-            grabbing && pct >= 100 -> clearGrab()
+            grabbing && pct in 1..99 -> {
+                val elapsed = tickCount - grabStartTick
+                if (pct >= LIVE_MIN_PCT && elapsed > 0) {
+                    estGrabTicks = Math.round(elapsed * 100.0 / pct).toInt()
+                }
+            }
+            grabbing && pct >= 100 -> finishGrab("100% title")
         }
+    }
+
+    /** Grab ended successfully: record how many server ticks it really took. */
+    private fun finishGrab(source: String) {
+        if (!grabbing) return
+        lastGrabTicks = (tickCount - grabStartTick).coerceAtLeast(0)
+        lastGrabExpectedTicks = (getMaxTimeMs() / 50L).toInt()
+        lastGrabTps = ServerTickTracker.observedTps()
+        val grabMs = System.currentTimeMillis() - grabStartMs
+        lastFinishTick = tickCount
+        lastFinishMs = System.currentTimeMillis()
+        lastFinishExpectedTick = grabStartTick + grabTotalTicks()
+        devLog("PearlWaypoints: grab wall time ${grabMs} ms for $lastGrabTicks ticks (${"%.1f".format(lastGrabTicks * 1000.0 / grabMs.coerceAtLeast(1))} ticks/s over the grab), expected finish at tick $lastFinishExpectedTick, actual $lastFinishTick")
+        if (lastGrabTicks > 10) {
+            val cfg = FamilyConfigManager.config.kuudra
+            val key = learnedKey()
+            val prev = cfg.pearlLearnedGrabTicks[key]
+            // Average with the previous measurement so one laggy grab does not
+            // swing the next run's opening estimate too far.
+            cfg.pearlLearnedGrabTicks[key] = if (prev == null || prev <= 0) lastGrabTicks else (prev + lastGrabTicks + 1) / 2
+            FamilyConfigManager.save()
+        }
+        devLog("PearlWaypoints: grab took $lastGrabTicks server ticks ($source), table says $lastGrabExpectedTicks (observed ${"%.1f".format(lastGrabTps)} ticks/s)")
+        devChat("§7Grab took §e$lastGrabTicks§7 server ticks §8($source)§7, table §e$lastGrabExpectedTicks§7, tick rate §e${"%.1f".format(lastGrabTps)}§7/s")
+        clearGrab()
+    }
+
+    /** Diagnostics go to the log file only on the dev account. */
+    private fun devLog(msg: String) {
+        if (org.kyowa.familyaddons.util.DevAccess.debug()) FamilyAddons.LOGGER.info(msg)
+    }
+
+    private fun devChat(msg: String) {
+        if (!org.kyowa.familyaddons.util.DevAccess.debug()) return
+        val mc = Minecraft.getInstance()
+        mc.execute { mc.player?.sendSystemMessage(org.kyowa.familyaddons.util.FaChat.prefixed(msg)) }
     }
 
     private fun clearGrab() {
         grabbing = false
         grabStartTick = -1
-        tickCount = 0
         nowSoundPlayed = false
+    }
+
+    /**
+     * Called from PlayerPositionPacketMixin on every server teleport. During
+     * or just after a grab that is the pearl landing: log where it landed
+     * relative to the pickup finishing (the number that decides whether a
+     * supply is kept). Negative = landed before the pickup was done.
+     */
+    fun onTeleport(pos: Vec3) {
+        val now = System.currentTimeMillis()
+        if (grabbing) {
+            val elapsed = tickCount - grabStartTick
+            devLog("PearlWaypoints: teleport DURING grab at tick $elapsed / ${grabTotalTicks()} expected (${now - grabStartMs} ms in) — landed ${grabTotalTicks() - elapsed} ticks early")
+            devChat("§cPearl landed §e${grabTotalTicks() - elapsed}§c ticks before the pickup finished")
+        } else if (lastFinishTick >= 0 && now - lastFinishMs < 3000) {
+            val late = tickCount - lastFinishTick
+            devLog("PearlWaypoints: teleport $late ticks / ${now - lastFinishMs} ms after the pickup finished")
+            devChat("§7Pearl landed §a$late§7 ticks after the pickup finished")
+        }
     }
 
     fun register() {
@@ -124,9 +241,7 @@ object PearlWaypoints {
         // (ServerTickTracker) stops arriving while the server lags, which
         // pauses the countdown exactly like the grab bar pauses — a client
         // tick counter kept running at 20 Hz and called "NOW" too early.
-        ServerTickTracker.onTick {
-            if (grabbing) tickCount++
-        }
+        ServerTickTracker.onTick { tickCount++ }
 
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             Prio.useNewPrio = FamilyConfigManager.config.kuudra.pearlNewPrio
@@ -150,7 +265,13 @@ object PearlWaypoints {
 
     private fun handleChat(plain: String) {
         when {
-            plain in GRAB_LOSS_LINES -> clearGrab()
+            // Success line: this is the real end of the pickup (it usually
+            // lands before a 100% title is ever shown), so measure here.
+            plain == "You retrieved some of Elle's supplies from the Lava!" -> finishGrab("chat")
+            plain in GRAB_LOSS_LINES -> {
+                if (grabbing) devLog("PearlWaypoints: grab cancelled after ${(tickCount - grabStartTick).coerceAtLeast(0)} server ticks / ${System.currentTimeMillis() - grabStartMs} ms ('$plain'), model expected ${grabTotalTicks()} ticks")
+                clearGrab()
+            }
             else -> {
                 val m = MISSING_REGEX.find(plain) ?: return
                 val name = m.groupValues[2]
@@ -206,12 +327,7 @@ object PearlWaypoints {
         val supplyDest = Prio.getSupplyForSpot(pre) ?: return false
         val sol = PearlCalculator.solvePearl(false, eye, eye, supplyDest) ?: return false
 
-        val ticksSinceGrab = (tickCount - grabStartTick).coerceAtLeast(0)
-        val flightTicks = (sol.flightTimeMs / 50L).toInt()
-        val maxTicks = (getMaxTimeMs() / 50L).toInt()
-        val delayTicks = (cfg.pearlTimerDelay.toLong() / 50L).toInt()
-        val remaining = maxTicks - ticksSinceGrab - flightTicks + delayTicks
-        return remaining <= 0
+        return remainingTicks(sol.flightTimeMs, isDoublePearl = false) <= 0
     }
 
     private fun playNowSound() {
@@ -225,20 +341,7 @@ object PearlWaypoints {
 
     private fun timerString(flightTimeMs: Long, isDoublePearl: Boolean): String? {
         if (!grabbing || grabStartTick < 0) return null
-        val cfg = FamilyConfigManager.config.kuudra
-
-        val ticksSinceGrab = (tickCount - grabStartTick).coerceAtLeast(0)
-        val flightTicks = (flightTimeMs / 50L).toInt()
-        val maxTicks = (getMaxTimeMs() / 50L).toInt()
-        val delayTicks = (cfg.pearlTimerDelay.toLong() / 50L).toInt()
-
-        val remaining = if (isDoublePearl) {
-            val dDelayTicks = (cfg.pearlDPearlLandDelay.toLong() / 50L).toInt()
-            (maxTicks + dDelayTicks) - ticksSinceGrab - flightTicks + delayTicks
-        } else {
-            maxTicks - ticksSinceGrab - flightTicks + delayTicks
-        }
-
+        val remaining = remainingTicks(flightTimeMs, isDoublePearl)
         val remainingMs = remaining * 50
         return when {
             remainingMs <= 0   -> "§aNOW"
@@ -426,6 +529,7 @@ object PearlWaypoints {
             1 -> drawBoxOutline(matrices, collector, pos, half, color)
             2 -> drawFlatSquare(matrices, collector, pos, half, color)
             3 -> drawFlatCircle(matrices, collector, pos, half, color)
+            4 -> drawTarget(matrices, collector, pos, color)
             else -> drawBoxOutline(matrices, collector, pos, half, color)
         }
     }
@@ -508,6 +612,69 @@ object PearlWaypoints {
         }
         edges(FamilyRenderTypes.LINES, a)
         edges(FamilyRenderTypes.LINES_NO_DEPTH, a * 0.3f)
+    }
+
+    /**
+     * "Target": a ring facing the camera around the aim point (the tolerance:
+     * throws inside it usually land, not always) with a solid dot at the exact
+     * aim point (the perfect throw). Both sizes come from the config.
+     */
+    private fun drawTarget(
+        matrices: PoseStack, collector: SubmitNodeCollector,
+        pos: Vec3, color: FloatArray,
+    ) {
+        val cfg = FamilyConfigManager.config.kuudra
+        val ringR = cfg.pearlTargetRingRadius.toDouble().coerceIn(0.05, 5.0)
+        val dotR = cfg.pearlTargetDotRadius.toDouble().coerceIn(0.01, 2.0)
+        val r = color[0]; val g = color[1]; val b = color[2]; val a = color[3]
+
+        // Basis of the plane facing the camera.
+        val cam = Minecraft.getInstance().gameRenderer.mainCamera().position()
+        var n = pos.subtract(cam)
+        if (n.lengthSqr() < 1e-6) n = Vec3(0.0, 0.0, 1.0)
+        n = n.normalize()
+        val up = if (abs(n.y) > 0.99) Vec3(1.0, 0.0, 0.0) else Vec3(0.0, 1.0, 0.0)
+        val u = n.cross(up).normalize()
+        val v = n.cross(u).normalize()
+
+        fun ring(radius: Double, segments: Int): List<Vec3> = (0..segments).map { i ->
+            val ang = Math.PI * 2.0 * i / segments
+            pos.add(u.scale(Math.cos(ang) * radius)).add(v.scale(Math.sin(ang) * radius))
+        }
+
+        // Outer ring: outline, depth-tested then faint through walls.
+        val outer = ring(ringR, 48)
+        fun ringLines(renderType: RenderType, alpha: Float) {
+            collector.submitCustomGeometry(matrices, renderType) { pose, buf ->
+                for (i in 0 until outer.size - 1) {
+                    val p0 = outer[i]; val p1 = outer[i + 1]
+                    val d = p1.subtract(p0).normalize()
+                    buf.addVertex(pose, p0.x.toFloat(), p0.y.toFloat(), p0.z.toFloat()).setColor(r, g, b, alpha)
+                        .setNormal(pose, d.x.toFloat(), d.y.toFloat(), d.z.toFloat()).setLineWidth(2.5f)
+                    buf.addVertex(pose, p1.x.toFloat(), p1.y.toFloat(), p1.z.toFloat()).setColor(r, g, b, alpha)
+                        .setNormal(pose, d.x.toFloat(), d.y.toFloat(), d.z.toFloat()).setLineWidth(2.5f)
+                }
+            }
+        }
+        ringLines(FamilyRenderTypes.LINES, a)
+        ringLines(FamilyRenderTypes.LINES_NO_DEPTH, a * 0.3f)
+
+        // Centre dot: solid filled disc (fan of quads, both windings).
+        val dot = ring(dotR, 20)
+        val cx = pos.x.toFloat(); val cy = pos.y.toFloat(); val cz = pos.z.toFloat()
+        collector.submitCustomGeometry(matrices, FamilyRenderTypes.BEAM) { pose, fill ->
+            for (i in 0 until dot.size - 1) {
+                val p0 = dot[i]; val p1 = dot[i + 1]
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, a)
+                fill.addVertex(pose, p0.x.toFloat(), p0.y.toFloat(), p0.z.toFloat()).setColor(r, g, b, a)
+                fill.addVertex(pose, p1.x.toFloat(), p1.y.toFloat(), p1.z.toFloat()).setColor(r, g, b, a)
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, a)
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, a)
+                fill.addVertex(pose, p1.x.toFloat(), p1.y.toFloat(), p1.z.toFloat()).setColor(r, g, b, a)
+                fill.addVertex(pose, p0.x.toFloat(), p0.y.toFloat(), p0.z.toFloat()).setColor(r, g, b, a)
+                fill.addVertex(pose, cx, cy, cz).setColor(r, g, b, a)
+            }
+        }
     }
 
     private fun drawFlatSquare(
@@ -608,6 +775,12 @@ object PearlWaypoints {
         sb.append("§7Kuudra tier: §e").append(AutoRequeue.kuudraTierIndex()).append(" §7|")
             .append(" Talisman: §e").append(cfg.pearlTalismanTier).append(" §7|")
             .append(" maxTime: §e").append(getMaxTimeMs()).append("ms\n")
+        sb.append("§7Grab model: §e${grabTotalTicks()}§7 ticks (table ${getMaxTimeMs() / 50L}, learned ${cfg.pearlLearnedGrabTicks[learnedKey()] ?: "-"}, live ${if (estGrabTicks > 0) estGrabTicks else "-"})\n")
+        sb.append("§7Server tick rate now: §e${"%.1f".format(ServerTickTracker.observedTps())}§7/s")
+        if (lastGrabTicks >= 0) {
+            sb.append(" §7| last grab: §e$lastGrabTicks§7 ticks vs table §e$lastGrabExpectedTicks§7 (rate then §e${"%.1f".format(lastGrabTps)}§7/s)")
+        }
+        sb.append("\n")
 
         sb.append("§7Grabbing: ")
         if (grabbing) {

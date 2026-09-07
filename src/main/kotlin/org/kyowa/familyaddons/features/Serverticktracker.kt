@@ -29,10 +29,46 @@ object ServerTickTracker {
         listeners.add(listener)
     }
 
+    // Wall-clock stamps of the last few seconds of ticks, for the observed
+    // tick rate (debug: a healthy Hypixel lobby reads ~20/s; ~40/s would mean
+    // we are double-counting the ping packet).
+    private const val RATE_WINDOW_MS = 5000L
+    private val recent = ArrayDeque<Long>()
+
+    /** Server ticks observed per second over the last 5 s, or -1 before the first tick. */
+    fun observedTps(): Double {
+        if (!everTicked) return -1.0
+        val now = System.currentTimeMillis()
+        synchronized(recent) {
+            while (recent.isNotEmpty() && now - recent.first() > RATE_WINDOW_MS) recent.removeFirst()
+            return recent.size / (RATE_WINDOW_MS / 1000.0)
+        }
+    }
+
     /** Driven by the packet mixin. Fires once per Hypixel server tick. */
-    fun onServerTick() {
+    // Diagnostic: the first PING_SAMPLE ping ids after a reset, with their
+    // spacing, so the packet stream can be understood (measured 22-24 pings/s
+    // where 20 real ticks were expected).
+    private const val PING_SAMPLE = 60
+    private var sampled = 0
+    private var prevPingMs = 0L
+    private val sample = StringBuilder()
+
+    fun onServerTick(pingId: Int = 0) {
         lastTickWallMs = System.currentTimeMillis()
         everTicked = true
+        if (sampled < PING_SAMPLE && org.kyowa.familyaddons.util.DevAccess.debug()) {
+            sample.append(pingId).append('@').append(if (prevPingMs == 0L) 0 else lastTickWallMs - prevPingMs).append(' ')
+            prevPingMs = lastTickWallMs
+            if (++sampled == PING_SAMPLE) {
+                org.kyowa.familyaddons.FamilyAddons.LOGGER.info("ServerTickTracker: ping sample (id@msSincePrev): $sample")
+                sample.setLength(0)
+            }
+        }
+        synchronized(recent) {
+            recent.addLast(lastTickWallMs)
+            while (recent.isNotEmpty() && lastTickWallMs - recent.first() > RATE_WINDOW_MS) recent.removeFirst()
+        }
         for (l in listeners) {
             try { l() } catch (_: Throwable) { /* don't let one bad listener break others */ }
         }
@@ -54,5 +90,8 @@ object ServerTickTracker {
     fun reset() {
         everTicked = false
         lastTickWallMs = 0L
+        sampled = 0
+        prevPingMs = 0L
+        sample.setLength(0)
     }
 }

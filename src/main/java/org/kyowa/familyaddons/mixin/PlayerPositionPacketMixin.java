@@ -6,6 +6,7 @@ import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.world.phys.Vec3;
 import org.kyowa.familyaddons.features.KuudraDirection;
 import org.kyowa.familyaddons.features.KuudraStunWaypoint;
+import org.kyowa.familyaddons.features.PearlWaypoints;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -33,5 +34,6 @@ public class PlayerPositionPacketMixin {
         Vec3 pos = packet.change().position();
         KuudraDirection.INSTANCE.onTeleport(pos);
         KuudraStunWaypoint.INSTANCE.onTeleport(pos);
+        PearlWaypoints.INSTANCE.onTeleport(pos);
     }
 }

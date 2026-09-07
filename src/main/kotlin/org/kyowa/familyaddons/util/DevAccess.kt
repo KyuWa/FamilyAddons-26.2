@@ -14,6 +14,9 @@ object DevAccess {
         UUID.fromString("305bcf8c-a93d-4d52-9e8c-b925e8d25682"), // KyoWaa
     )
 
+    /** Diagnostics: dev account AND the Debug Messages toggle in the Dev category. */
+    fun debug(): Boolean = isDev() && org.kyowa.familyaddons.config.FamilyConfigManager.config.dev.debugMessages
+
     fun isDev(): Boolean {
         val id = Minecraft.getInstance().user?.profileId ?: return false
         return id in DEV_UUIDS

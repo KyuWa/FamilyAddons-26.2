@@ -157,6 +157,30 @@ class KuudraConfig {
     @ConfigEditorBoolean
     var directionEnabled = false
 
+    @Expose @JvmField
+    @ConfigAccordionId(id = 5)
+    @ConfigOption(name = "Bold", desc = "Draw the direction text in bold.")
+    @ConfigEditorBoolean
+    var directionBold = true
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 5)
+    @ConfigOption(name = "Text Scale", desc = "Size of the direction text (also draggable/resizable in the HUD editor).")
+    @ConfigEditorSlider(minValue = 1f, maxValue = 6f, minStep = 0.5f)
+    var directionScaleSlider = 2f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 5)
+    @ConfigOption(name = "Custom Color", desc = "Use one color for every direction instead of red/green/light green/dark red per side.")
+    @ConfigEditorBoolean
+    var directionCustomColor = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 5)
+    @ConfigOption(name = "Direction Color", desc = "Color used when Custom Color is on.")
+    @ConfigEditorColour
+    var directionColor = "0:255:255:255:85"
+
     // -1 = auto-center
     @Expose @JvmField var directionHudX = -1
     @Expose @JvmField var directionHudY = -1
@@ -383,8 +407,20 @@ class KuudraConfig {
     @Expose @JvmField
     @ConfigAccordionId(id = 11)
     @ConfigOption(name = "Waypoint Shape", desc = "Shape of the main aim-point waypoint.")
-    @ConfigEditorDropdown(values = ["ESP Box", "Box Outline", "Flat Square", "Flat Circle"])
+    @ConfigEditorDropdown(values = ["ESP Box", "Box Outline", "Flat Square", "Flat Circle", "Target"])
     var pearlShape = 1
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 11)
+    @ConfigOption(name = "Target Ring Radius", desc = "Target shape only: radius of the ring around the aim point (the throws-usually-land zone).")
+    @ConfigEditorSlider(minValue = 0.1f, maxValue = 2f, minStep = 0.05f)
+    var pearlTargetRingRadius = 0.5f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 11)
+    @ConfigOption(name = "Target Dot Radius", desc = "Target shape only: radius of the solid dot at the exact aim point.")
+    @ConfigEditorSlider(minValue = 0.02f, maxValue = 0.5f, minStep = 0.01f)
+    var pearlTargetDotRadius = 0.08f
 
     @Expose @JvmField
     @ConfigAccordionId(id = 11)
@@ -410,6 +446,16 @@ class KuudraConfig {
     @ConfigOption(name = "Timer Delay", desc = "Extra delay (ms) added to the displayed timer to compensate for input lag.")
     @ConfigEditorSlider(minValue = 0f, maxValue = 500f, minStep = 10f)
     var pearlTimerDelay = 0f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 11)
+    @ConfigOption(name = "Reaction Time", desc = "Fire NOW this many ms early to cover the time between seeing NOW and the throw leaving your hand. 200 = typical.")
+    @ConfigEditorSlider(minValue = 0f, maxValue = 500f, minStep = 10f)
+    var pearlReactionMs = 200f
+
+    /** Measured grab length per "tier/talisman", in server-tick units. Learned automatically, no GUI. */
+    @Expose @JvmField
+    var pearlLearnedGrabTicks: MutableMap<String, Int> = mutableMapOf()
 
     @Expose @JvmField
     @ConfigAccordionId(id = 11)
