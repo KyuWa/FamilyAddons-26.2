@@ -407,18 +407,12 @@ class KuudraConfig {
     @Expose @JvmField
     @ConfigAccordionId(id = 11)
     @ConfigOption(name = "Waypoint Shape", desc = "Shape of the main aim-point waypoint.")
-    @ConfigEditorDropdown(values = ["ESP Box", "Box Outline", "Flat Square", "Flat Circle", "Target"])
+    @ConfigEditorDropdown(values = ["ESP Box", "Box Outline", "Flat Square", "Flat Circle", "Dot"])
     var pearlShape = 1
 
     @Expose @JvmField
     @ConfigAccordionId(id = 11)
-    @ConfigOption(name = "Target Ring Radius", desc = "Target shape only: radius of the ring around the aim point (the throws-usually-land zone).")
-    @ConfigEditorSlider(minValue = 0.1f, maxValue = 2f, minStep = 0.05f)
-    var pearlTargetRingRadius = 0.5f
-
-    @Expose @JvmField
-    @ConfigAccordionId(id = 11)
-    @ConfigOption(name = "Target Dot Radius", desc = "Target shape only: radius of the solid dot at the exact aim point.")
+    @ConfigOption(name = "Dot Radius", desc = "Dot shape only: radius of the solid dot at the exact aim point.")
     @ConfigEditorSlider(minValue = 0.02f, maxValue = 0.5f, minStep = 0.01f)
     var pearlTargetDotRadius = 0.08f
 
