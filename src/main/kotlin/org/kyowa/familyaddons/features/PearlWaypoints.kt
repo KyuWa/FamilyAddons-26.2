@@ -111,7 +111,8 @@ object PearlWaypoints {
     @Volatile private var lastFinishMs: Long = 0L
     @Volatile private var lastFinishExpectedTick: Int = -1
 
-    private fun learnedKey() = "${AutoRequeue.kuudraTierIndex()}/${FamilyConfigManager.config.kuudra.pearlTalismanTier}"
+    private fun learnedKey() = "${AutoRequeue.kuudraTierIndex()}/${FamilyConfigManager.config.kuudra.pearlTalismanTier}" +
+        (if (KuudraFuelPhase.isInFuelPhase()) "/fuel" else "")
 
     /** Total grab length in our tick units, best current estimate. */
     private fun grabTotalTicks(): Int {
@@ -246,10 +247,12 @@ object PearlWaypoints {
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             Prio.useNewPrio = FamilyConfigManager.config.kuudra.pearlNewPrio
 
-            if (!KuudraPhase.isInP1()) {
+            // A grab is a supply pickup in Phase 1 or a fuel cell pickup in the
+            // T1/T2 fuel phase (same progress bar, same throw-timer maths).
+            if (!KuudraPhase.isInP1() && !KuudraFuelPhase.isInFuelPhase()) {
                 if (grabbing) clearGrab()
-                if (MissingSupplies.missing.isNotEmpty()) MissingSupplies.clear()
             }
+            if (!KuudraPhase.isInP1() && MissingSupplies.missing.isNotEmpty()) MissingSupplies.clear()
 
             // Check NOW sound trigger every tick during a grab.
             if (grabbing && !nowSoundPlayed) {
@@ -267,8 +270,9 @@ object PearlWaypoints {
         when {
             // Success line: this is the real end of the pickup (it usually
             // lands before a 100% title is ever shown), so measure here.
-            plain == "You retrieved some of Elle's supplies from the Lava!" -> finishGrab("chat")
-            plain in GRAB_LOSS_LINES -> {
+            plain == "You retrieved some of Elle's supplies from the Lava!" ||
+                plain == "You retrieved a Ballista Fuel Cell from the Lava!" -> finishGrab("chat")
+            plain in GRAB_LOSS_LINES || plain.endsWith("slipped out of your hands!") -> {
                 if (grabbing) devLog("PearlWaypoints: grab cancelled after ${(tickCount - grabStartTick).coerceAtLeast(0)} server ticks / ${System.currentTimeMillis() - grabStartMs} ms ('$plain'), model expected ${grabTotalTicks()} ticks")
                 clearGrab()
             }
@@ -321,6 +325,14 @@ object PearlWaypoints {
         val mc = Minecraft.getInstance()
         val player = mc.player ?: return false
         val eye = player.getEyePosition(1f)
+
+        // Fuel phase: the throw goes to the Ballista, from anywhere.
+        if (KuudraFuelPhase.isInFuelPhase()) {
+            if (!cfg.fuelPearlEnabled || !cfg.fuelPearlTimer) return false
+            val sol = PearlCalculator.solvePearl(false, eye, eye, KuudraFuelPhase.BALLISTA) ?: return false
+            return remainingTicks(sol.flightTimeMs, isDoublePearl = false) <= 0
+        }
+
         val pre = Pre.getClosestSpot(eye)
         if (pre == Pre.NONE) return false
 
@@ -339,7 +351,7 @@ object PearlWaypoints {
         player.playSound(SoundEvents.NOTE_BLOCK_PLING.value(), volume, 1.8f)
     }
 
-    private fun timerString(flightTimeMs: Long, isDoublePearl: Boolean): String? {
+    internal fun timerString(flightTimeMs: Long, isDoublePearl: Boolean): String? {
         if (!grabbing || grabStartTick < 0) return null
         val remaining = remainingTicks(flightTimeMs, isDoublePearl)
         val remainingMs = remaining * 50
@@ -682,7 +694,7 @@ object PearlWaypoints {
         drawFlatPolygon(matrices, collector, cx, cy, cz, pts, color)
     }
 
-    private fun drawLabel(
+    internal fun drawLabel(
         matrices: PoseStack,
         collector: SubmitNodeCollector,
         aimPoint: Vec3,

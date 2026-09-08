@@ -37,11 +37,11 @@ import org.lwjgl.opengl.GL11
  */
 object KuudraCrateWaypoints {
 
-    private const val REACH_DIST = 2.75
-    private const val DRAG_DIST  = 4.75
+    internal const val REACH_DIST = 2.75
+    internal const val DRAG_DIST  = 4.75
 
     // Zombie must be within this many blocks of a crate to be drawn.
-    private const val ZOMBIE_TO_CRATE_MAX = 3.0
+    internal const val ZOMBIE_TO_CRATE_MAX = 3.0
 
     // Bobber Y must lie in this range for the drag to register.
     private const val BOBBER_Y_MIN = 70.0
@@ -60,7 +60,7 @@ object KuudraCrateWaypoints {
     }
 
     /** Distance from player eye to closest point on the zombie's hitbox. */
-    private fun reachDistanceTo(z: Zombie): Double {
+    internal fun reachDistanceTo(z: Zombie): Double {
         val player = Minecraft.getInstance().player ?: return Double.MAX_VALUE
         val eye = player.getEyePosition(1f)
         val box = z.boundingBox.inflate(0.1)
@@ -75,7 +75,7 @@ object KuudraCrateWaypoints {
      * Drag-range "in range" check. Requires fishing bobber to be near the
      * crate position with a sane Y. Returns false if no rod is out.
      */
-    private fun bobberInDragRange(g: Giant): Boolean {
+    internal fun bobberInDragRange(g: Giant): Boolean {
         val player = Minecraft.getInstance().player ?: return false
         val hook: FishingHook = player.fishing ?: return false
         val bobberPos = Vec3(hook.x, hook.y, hook.z)
@@ -146,7 +146,7 @@ object KuudraCrateWaypoints {
     }
 
     /** Wireframe outline of an AABB. Drawn with depth, then through walls at low alpha. */
-    private fun drawWireframeBox(
+    internal fun drawWireframeBox(
         matrices: PoseStack,
         collector: SubmitNodeCollector,
         box: AABB,
@@ -191,7 +191,7 @@ object KuudraCrateWaypoints {
      * from line segments along the perimeter. Drawn solid in front, faded
      * through walls.
      */
-    private fun drawHorizontalCircle(
+    internal fun drawHorizontalCircle(
         matrices: PoseStack,
         collector: SubmitNodeCollector,
         center: Vec3,

@@ -43,6 +43,11 @@ object FamilyConfigManager {
         BuiltinMoulConfigGuis.addProcessors(processor)
         driver = ConfigProcessorDriver(processor)
         driver.processConfig(_config)
+        // Public build: the Dev category stays in the code and the json, but is
+        // dropped from the editor before it is ever built. Dev jar keeps it.
+        if (!org.kyowa.familyaddons.util.BuildFlavor.isDev) {
+            processor.allCategories.remove("dev")
+        }
 
         scheduler.scheduleAtFixedRate({ save() }, 60, 60, TimeUnit.SECONDS)
     }

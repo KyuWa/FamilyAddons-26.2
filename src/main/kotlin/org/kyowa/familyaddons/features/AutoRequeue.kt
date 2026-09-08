@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import org.kyowa.familyaddons.commands.TestCommand
 import org.kyowa.familyaddons.config.FamilyConfigManager
+import org.kyowa.familyaddons.party.PartyTracker
 
 object AutoRequeue {
 
@@ -175,6 +176,15 @@ object AutoRequeue {
     }
 
     // ── Kuudra tick ───────────────────────────────────────────
+    /** "Check Party Size": true (and says why) when fewer than 4 players are in the party. */
+    private fun partyTooSmall(): Boolean {
+        if (!FamilyConfigManager.config.kuudra.checkPartySize) return false
+        val n = PartyTracker.partySize()
+        if (n >= 4) return false
+        FaChat.send("§eOnly §c$n§e/4 players in the party — Kuudra requeue cancelled.")
+        return true
+    }
+
     private fun tickKuudra() {
         if (kuudraDtAnnounceTicks > 0) {
             kuudraDtAnnounceTicks--
@@ -190,7 +200,7 @@ object AutoRequeue {
                 kuudraWaitTicks--
             } else {
                 kuudraWaiting = false
-                Minecraft.getInstance().player?.connection?.sendCommand("instancerequeue")
+                if (!partyTooSmall()) Minecraft.getInstance().player?.connection?.sendCommand("instancerequeue")
             }
         }
     }
@@ -287,6 +297,7 @@ object AutoRequeue {
                 else       -> config.requeueInfernal
             }
             if (!tierAllowed) return
+            if (partyTooSmall()) return
 
             if (kuudraDiedThisRun) {
                 kuudraDiedThisRun = false

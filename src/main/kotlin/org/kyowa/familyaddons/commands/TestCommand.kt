@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component
 import org.kyowa.familyaddons.config.FamilyConfigManager
 import org.kyowa.familyaddons.features.AutoUpdater
 import org.kyowa.familyaddons.features.BestiaryZoneHighlight
+import org.kyowa.familyaddons.features.DiscordTickets
 import org.kyowa.familyaddons.features.KuudraCrateWaypoints
 import org.kyowa.familyaddons.features.KuudraDirection
 import org.kyowa.familyaddons.features.KuudraFuelPhase
@@ -138,13 +139,46 @@ object TestCommand {
 
                     // ── Dev-only dumps (DevAccess: hidden + rejected for everyone else) ──
 
+                    // /fa claim <channel_id> — clicked from a ticket line: copy IGN + tell the bot to /claim
+                    .then(literal("claim").requires { DevAccess.isDev() }
+                        .then(argument("channel", StringArgumentType.word())
+                            .executes { ctx ->
+                                DiscordTickets.claim(StringArgumentType.getString(ctx, "channel"))
+                                1
+                            }))
+
+                    // /fa helix next|prev|reset|list — Helix tree route on Torrhus Canyon
+                    .then(literal("helix").requires { DevAccess.isDev() }
+                        .executes { org.kyowa.familyaddons.features.HelixWaypoints.command("list"); 1 }
+                        .then(argument("action", StringArgumentType.word())
+                            .executes { ctx ->
+                                org.kyowa.familyaddons.features.HelixWaypoints.command(StringArgumentType.getString(ctx, "action"))
+                                1
+                            }))
+
+                    // /fa ticketopen <channel_id> — clicked from a ticket line: jump the Discord app to it
+                    .then(literal("ticketopen").requires { DevAccess.isDev() }
+                        .then(argument("channel", StringArgumentType.word())
+                            .executes { ctx ->
+                                DiscordTickets.open(StringArgumentType.getString(ctx, "channel"))
+                                1
+                            }))
+
+                    // /fa tickets — ticket bridge state
+                    .then(literal("tickets").requires { DevAccess.isDev() }.executes {
+                        Minecraft.getInstance().player?.sendSystemMessage(Component.literal(DiscordTickets.debugDump().trimEnd()))
+                        1
+                    })
+
                     // /fa kuudra — dump Kuudra feature state (direction, pearls, crates)
                     .then(literal("kuudra").requires { DevAccess.isDev() }.executes { ctx ->
                         val p = Minecraft.getInstance().player ?: return@executes 1
+                        p.sendSystemMessage(Component.literal(org.kyowa.familyaddons.features.KuudraPhase.debugDump().trimEnd()))
                         p.sendSystemMessage(Component.literal(KuudraDirection.debugDump().trimEnd()))
                         p.sendSystemMessage(Component.literal(PearlWaypoints.debugDump().trimEnd()))
                         p.sendSystemMessage(Component.literal(KuudraCrateWaypoints.debugDump().trimEnd()))
                         p.sendSystemMessage(Component.literal(KuudraFuelPhase.debugDump().trimEnd()))
+                        p.sendSystemMessage(Component.literal(org.kyowa.familyaddons.features.KuudraBuildOverlay.debugDump().trimEnd()))
                         1
                     })
 

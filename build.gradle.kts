@@ -64,3 +64,22 @@ java {
 tasks.jar {
     archiveVersion.set("26.2")
 }
+
+// Two artifacts per build: the public jar, and a dev jar that only differs by a
+// marker resource (see BuildFlavor.kt). The mod hides the Dev config category
+// unless the marker is present. Both come out of `gradlew build`.
+val devMarker = layout.buildDirectory.file("dev-marker/familyaddons-dev.marker")
+val writeDevMarker by tasks.registering {
+    outputs.file(devMarker)
+    doLast {
+        devMarker.get().asFile.apply { parentFile.mkdirs(); writeText("dev\n") }
+    }
+}
+val devJar by tasks.registering(Zip::class) {
+    dependsOn(tasks.jar, writeDevMarker)
+    from(zipTree(tasks.jar.get().archiveFile))
+    from(devMarker)
+    destinationDirectory.set(layout.buildDirectory.dir("libs"))
+    archiveFileName.set("FamilyAddons-26.2-dev.jar")
+}
+tasks.build { dependsOn(devJar) }

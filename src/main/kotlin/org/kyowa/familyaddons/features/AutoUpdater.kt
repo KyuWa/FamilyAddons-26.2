@@ -1,6 +1,7 @@
 package org.kyowa.familyaddons.features
 
 import com.google.gson.JsonParser
+import org.kyowa.familyaddons.util.BuildFlavor
 import org.kyowa.familyaddons.util.FaChat
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
@@ -442,7 +443,7 @@ object AutoUpdater {
             try {
                 val mc = Minecraft.getInstance()
                 val modsDir = File(mc.gameDirectory, "mods")
-                val newName = "FamilyAddons-${latestVersion}.jar"
+                val newName = "FamilyAddons-${latestVersion}${if (BuildFlavor.isDev) "-dev" else ""}.jar"
 
                 val tempFile = File(modsDir, "$newName.tmp")
                 tempFile.delete()
@@ -466,6 +467,15 @@ object AutoUpdater {
                     tempFile.delete()
                 }
                 FamilyAddons.LOGGER.info("AutoUpdater: downloaded $newName (${outFile.length() / 1024}KB)")
+
+                if (BuildFlavor.isDev) {
+                    // The release asset is the public jar. Stamp it with the dev marker
+                    // so this install stays a dev build after the update.
+                    java.nio.file.FileSystems.newFileSystem(outFile.toPath(), mapOf<String, Any>()).use { fs ->
+                        java.nio.file.Files.write(fs.getPath("/" + BuildFlavor.MARKER), "dev\n".toByteArray())
+                    }
+                    FamilyAddons.LOGGER.info("AutoUpdater: stamped $newName as a dev build")
+                }
 
                 val oldJars = modsDir.listFiles()?.filter {
                     it.name.startsWith("FamilyAddons") &&

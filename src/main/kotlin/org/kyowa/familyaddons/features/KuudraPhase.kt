@@ -18,21 +18,36 @@ object KuudraPhase {
 
     private const val PHASE_1_START = "[NPC] Elle: Okay adventurers, I will go and fish up Kuudra!"
     private const val PHASE_1_END   = "[NPC] Elle: OMG! Great work collecting my supplies!"
+    private const val BUILD_START   = "[NPC] Elle: It's time to build the Ballista again! Cover me!"
+    private const val BUILD_END     = "[NPC] Elle: Phew! The Ballista is finally ready! It should be strong enough to tank Kuudra's blows now!"
 
     @Volatile private var inP1: Boolean = false
+    @Volatile private var inBuild: Boolean = false
 
     /** Returns true while we're in the supply-collection phase. */
     fun isInP1(): Boolean = inP1
 
+    /** True during the build phase: from the end of supply collection until the Ballista is ready. */
+    fun isInBuild(): Boolean = inBuild
+
+    private fun log(what: String) {
+        org.kyowa.familyaddons.FamilyAddons.LOGGER.info("KuudraPhase: $what -> p1=$inP1 build=$inBuild")
+    }
+
+    fun debugDump(): String = "§6[FA Phase] §7p1=${if (inP1) "§atrue" else "§cfalse"} §7build=${if (inBuild) "§atrue" else "§cfalse"}"
+
     fun register() {
-        ClientPlayConnectionEvents.JOIN.register { _, _, _ -> inP1 = false }
-        ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> inP1 = false }
+        ClientPlayConnectionEvents.JOIN.register { _, _, _ -> inP1 = false; inBuild = false }
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> inP1 = false; inBuild = false }
 
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, _ ->
             val plain = message.string.replace(COLOR_CODE_REGEX, "").trim()
             when (plain) {
-                PHASE_1_START -> inP1 = true
-                PHASE_1_END   -> inP1 = false
+                PHASE_1_START -> { inP1 = true; inBuild = false; log("supply phase start") }
+                PHASE_1_END   -> { inP1 = false; inBuild = true; log("build phase start (supplies collected)") }
+                BUILD_START   -> { inP1 = false; inBuild = true; log("build phase start (build again)") }
+                BUILD_END     -> { inBuild = false; log("build phase end (ballista ready)") }
+                "KUUDRA DOWN!" -> { inBuild = false; log("kuudra down") }
             }
             true
         }

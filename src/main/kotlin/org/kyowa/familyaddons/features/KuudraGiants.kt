@@ -66,6 +66,8 @@ object KuudraGiants {
     /** True if either consumer feature is currently active. Drives whether scan runs. */
     private fun shouldScan(): Boolean {
         val cfg = org.kyowa.familyaddons.config.FamilyConfigManager.config
+        // Fuel phase (T1/T2): fuel cells ride the same invisible giants as supplies.
+        if (KuudraFuelPhase.isInFuelPhase()) return cfg.kuudra.fuelCellBeamsEnabled
         // Public feature — anyone can enable.
         if (cfg.kuudra.supplyWaypointsEnabled) return true
         if (cfg.kuudra.crateWaypointsEnabled) return true
@@ -76,7 +78,8 @@ object KuudraGiants {
         ClientTickEvents.END_CLIENT_TICK.register {
             // Stop scanning when no consumer feature wants the data, or when
             // we're outside Phase 1.
-            if (!shouldScan() || !AutoRequeue.isInKuudra() || !KuudraPhase.isInP1()) {
+            val phaseOk = KuudraPhase.isInP1() || KuudraFuelPhase.isInFuelPhase()
+            if (!shouldScan() || !AutoRequeue.isInKuudra() || !phaseOk) {
                 if (_giants.isNotEmpty() || _zombies.isNotEmpty()) {
                     _giants.clear(); _zombies.clear()
                 }

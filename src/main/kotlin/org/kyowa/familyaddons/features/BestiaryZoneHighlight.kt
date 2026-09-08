@@ -58,7 +58,44 @@ object BestiaryZoneHighlight {
      * critters as plain scaled vanilla mobs). [type] is the entity registry
      * path ("bee"), width bounds are on the entity's bounding box.
      */
-    data class EntityRule(val type: String, val minWidth: Float = 0f, val maxWidth: Float = Float.MAX_VALUE)
+    /**
+     * How to recognise a mob with no nametag: entity type, optional width
+     * window, and an optional allow-list of variant keys (see [variantKey]),
+     * because several Torrhus critters are the same vanilla mob in different
+     * colours: the "Hideon..." shulkers, the tropical-fish species, axolotls.
+     * Variant entries are "/"-separated and a segment of "*" matches anything,
+     * e.g. "* / yellow / *" (without spaces) = any yellow-bodied tropical fish.
+     */
+    data class EntityRule(
+        val type: String,
+        val minWidth: Float = 0f,
+        val maxWidth: Float = Float.MAX_VALUE,
+        val variants: Set<String>? = null,
+    )
+
+    /**
+     * Variant key of a vanilla mob that Hypixel re-skins by colour:
+     *  shulker       -> shell colour               ("yellow")
+     *  tropical_fish -> pattern/body/pattern colour ("kob/yellow/white")
+     *  axolotl       -> variant                     ("lucy")
+     * null for everything else. Printed by /fa entitydump as `variant=`.
+     */
+    fun variantKey(entity: net.minecraft.world.entity.Entity): String? = when (entity) {
+        is net.minecraft.world.entity.monster.Shulker -> entity.color?.getName() ?: "none"
+        is net.minecraft.world.entity.animal.fish.TropicalFish ->
+            "${entity.pattern.getSerializedName()}/${entity.baseColor.getName()}/${entity.patternColor.getName()}"
+        is net.minecraft.world.entity.animal.axolotl.Axolotl -> entity.variant.getName()
+        else -> null
+    }
+
+    private fun variantMatches(key: String, pattern: String): Boolean {
+        val k = key.split("/"); val q = pattern.split("/")
+        if (k.size != q.size) return false
+        for (i in k.indices) if (q[i] != "*" && !q[i].equals(k[i], ignoreCase = true)) return false
+        return true
+    }
+
+    private val ALL_DYE_COLORS: Set<String> = net.minecraft.world.item.DyeColor.values().map { it.getName() }.toSet()
 
     private data class MobEntry(
         val displayName: String,
@@ -74,6 +111,18 @@ object BestiaryZoneHighlight {
         // vanilla mobs with no nametag at all.
         "beeheemoth" to EntityRule("bee", minWidth = 0.9f),   // giant scaled bee (vanilla bee is 0.7 wide)
         "drybark"    to EntityRule("creaking"),                // the walking dry tree
+        // Entity dump 2026-09-08: plain shulkers (1.0 wide), no nametag. The
+        // Hideon* critters differ only by shell colour; Hideonleaf is the green
+        // one, so Hideonsun is any other colour until both are dumped exactly.
+        "hideonsun"  to EntityRule("shulker", variants = ALL_DYE_COLORS - setOf("lime", "green")),
+        "hideonleaf" to EntityRule("shulker", variants = setOf("lime", "green")),
+        // Entity dump 2026-09-08 + screenshot: Solar is the yellow-bodied tropical fish.
+        "solar"      to EntityRule("tropical_fish", variants = setOf("*/yellow/*")),
+        "ember"      to EntityRule("tropical_fish", variants = setOf("*/orange/*")),
+        "timil"      to EntityRule("tropical_fish", variants = setOf("*/pink/white", "*/white/pink")),
+        // 2026-09-08: every axolotl on the island is a Sepialot; Dustybit is the frog.
+        "sepialot"   to EntityRule("axolotl"),
+        "dustybit"   to EntityRule("frog"),
     )
 
     /** Entity rules for every mob in the selected zone, keyed by display name. */
@@ -216,6 +265,11 @@ object BestiaryZoneHighlight {
             if (name !in active) continue
             if (rule.type != type) continue
             if (width < rule.minWidth || width > rule.maxWidth) continue
+            val variants = rule.variants
+            if (variants != null) {
+                val key = variantKey(entity) ?: continue
+                if (variants.none { variantMatches(key, it) }) continue
+            }
             return true
         }
         return false
@@ -224,10 +278,13 @@ object BestiaryZoneHighlight {
     private fun parseEntityRule(obj: JsonObject): EntityRule? {
         val type = obj.get("entityType")?.asString?.trim()?.lowercase()?.removePrefix("minecraft:") ?: return null
         if (type.isEmpty()) return null
+        val variants = (obj.getAsJsonArray("variants") ?: obj.getAsJsonArray("shulkerColors"))
+            ?.map { it.asString.lowercase() }?.toSet()?.takeIf { it.isNotEmpty() }
         return EntityRule(
             type,
             obj.get("minWidth")?.asFloat ?: 0f,
             obj.get("maxWidth")?.asFloat ?: Float.MAX_VALUE,
+            variants,
         )
     }
     private var repoData: Map<String, List<MobEntry>> = emptyMap()

@@ -19,14 +19,14 @@ val COLOR_CODE_REGEX = Regex("§.")
 object FamilyAddons : ClientModInitializer {
 
     val LOGGER = LoggerFactory.getLogger("FamilyAddons")
-    const val VERSION = "1.0.7"
+    const val VERSION = "1.0.8"
     const val MC_VERSION = "26.2"
 
     private var hudEditorMouseWasDown = false
     private var previousScreen: Screen? = null
 
     override fun onInitializeClient() {
-        LOGGER.info("FamilyAddons $VERSION loading...")
+        LOGGER.info("FamilyAddons $VERSION loading (${org.kyowa.familyaddons.util.BuildFlavor.name} build)...")
 
         AutoUpdater.register()
         UsageHeartbeat.register()
@@ -37,8 +37,6 @@ object FamilyAddons : ClientModInitializer {
         TestCommand.register()
 
         // Chat
-        HideMessages.register()
-        ChatTranslator.register()
         TranslateCommand.register()
 
         // Utilities
@@ -87,6 +85,7 @@ object FamilyAddons : ClientModInitializer {
         PileWaypoints.register()
         SupplyWaypoints.register()
         KuudraFuelPhase.register()
+        KuudraBuildOverlay.register()
         KuudraGiants.register()
         KuudraCrateWaypoints.register()
         PearlWaypoints.register()
@@ -102,6 +101,16 @@ object FamilyAddons : ClientModInitializer {
 
         // Dev
         DevTools.register()
+        DiscordTickets.register()
+        HelixWaypoints.register()
+        NameStyle.register()
+
+        // Chat filter + translator LAST: Fabric's ALLOW_GAME stops calling
+        // listeners once one hides a line, so anything registered after a
+        // filter would miss e.g. Elle's phase lines when the player filters
+        // NPC chat. Every tracker above must see every line first.
+        HideMessages.register()
+        ChatTranslator.register()
 
         // Join event
         ClientPlayConnectionEvents.JOIN.register { _, _, _ ->

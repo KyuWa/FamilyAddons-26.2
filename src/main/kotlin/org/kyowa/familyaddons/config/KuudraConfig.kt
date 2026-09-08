@@ -236,6 +236,12 @@ class KuudraConfig {
 
     @Expose @JvmField
     @ConfigAccordionId(id = 9)
+    @ConfigOption(name = "Ballista Pearl Timer", desc = "Countdown on the Ballista aim point while you are picking up a fuel cell, NOW when to throw. Uses the Pearl Waypoints timer settings and NOW sound.")
+    @ConfigEditorBoolean
+    var fuelPearlTimer = true
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 9)
     @ConfigOption(name = "Fuel Cell Waypoints", desc = "Beacon beams over every FUEL CELL during the fuel phase.")
     @ConfigEditorBoolean
     var fuelCellBeamsEnabled = false
@@ -257,6 +263,72 @@ class KuudraConfig {
     @ConfigOption(name = "Fuel Cell Beam Width", desc = "Width of the fuel cell beams. 1 = normal beacon beam.")
     @ConfigEditorSlider(minValue = 0.2f, maxValue = 3f, minStep = 0.1f)
     var fuelCellBeamWidth = 1f
+
+    // ── Build Overlay accordion (id=10) ───────────────────────
+    @Expose @JvmField
+    @ConfigOption(name = "Build Overlay", desc = "")
+    @ConfigEditorAccordion(id = 10)
+    var buildOverlayAccordion = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Enable Build Overlay", desc = "During the build phase, a beacon beam on every supply pile that glides from red (0%) to green (100%) as that pile gets built.")
+    @ConfigEditorBoolean
+    var buildOverlayEnabled = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Show Progress Text", desc = "Draw a bold 'PROGRESS: 45%' / 'PROGRESS: COMPLETE' label on each pile, the real value the pile shows.")
+    @ConfigEditorBoolean
+    var buildShowPercent = true
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Hide Hypixel Progress Text", desc = "Hide Hypixel's own small PROGRESS nametag on the piles so only the overlay label shows.")
+    @ConfigEditorBoolean
+    var buildHideHypixelText = true
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Text Scale", desc = "Size of the progress label.")
+    @ConfigEditorSlider(minValue = 0.5f, maxValue = 6f, minStep = 0.5f)
+    var buildPercentScale = 2.5f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Fade Time", desc = "Seconds the colour takes to glide to a new progress value. Lower = snappier.")
+    @ConfigEditorSlider(minValue = 0.1f, maxValue = 3f, minStep = 0.1f)
+    var buildFadeSeconds = 0.8f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Hide Finished", desc = "Remove the beam once a pile reaches 100%.")
+    @ConfigEditorBoolean
+    var buildHideFinished = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Hide When All Complete", desc = "Treat the build as done once all 6 piles read COMPLETE (after the delay below), without waiting for Elle's line. Comes back if a pile gets knocked down.")
+    @ConfigEditorBoolean
+    var buildHideWhenComplete = true
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "All Complete Delay", desc = "Seconds all 6 piles must stay COMPLETE before the overlay hides.")
+    @ConfigEditorSlider(minValue = 0f, maxValue = 5f, minStep = 0.5f)
+    var buildCompleteDelay = 0f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Beam Opacity", desc = "How see-through the build beams are. 1 = solid.")
+    @ConfigEditorSlider(minValue = 0.05f, maxValue = 1f, minStep = 0.05f)
+    var buildBeamOpacity = 0.6f
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 10)
+    @ConfigOption(name = "Beam Width", desc = "Width of the build beams. 1 = normal beacon beam.")
+    @ConfigEditorSlider(minValue = 0.2f, maxValue = 3f, minStep = 0.1f)
+    var buildBeamWidth = 1f
 
     // ── Kuudra Highlight accordion (id=8) ─────────────────────
     @Expose @JvmField

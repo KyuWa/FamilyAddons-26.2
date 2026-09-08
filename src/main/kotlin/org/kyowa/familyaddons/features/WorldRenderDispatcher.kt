@@ -27,7 +27,9 @@ object WorldRenderDispatcher {
                 !PearlWaypoints.hasWaypoints() &&
                 !PileWaypoints.hasBeams() &&
                 !SupplyWaypoints.hasBeams() &&
-                !KuudraFuelPhase.hasRender()
+                !KuudraFuelPhase.hasRender() &&
+                !KuudraBuildOverlay.hasRender() &&
+                !HelixWaypoints.hasWaypoints()
             ) return@register
 
             val client = Minecraft.getInstance()
@@ -52,6 +54,8 @@ object WorldRenderDispatcher {
             PileWaypoints.onWorldRender(matrices, collector, camera)
             SupplyWaypoints.onWorldRender(matrices, collector, camera)
             KuudraFuelPhase.onWorldRender(matrices, collector, camera)
+            KuudraBuildOverlay.onWorldRender(matrices, collector, camera)
+            HelixWaypoints.onWorldRender(matrices, collector, camera)
 
             matrices.popPose()
         }
