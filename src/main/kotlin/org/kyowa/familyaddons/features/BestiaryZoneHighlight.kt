@@ -86,6 +86,7 @@ object BestiaryZoneHighlight {
         is net.minecraft.world.entity.animal.fish.TropicalFish ->
             "${entity.pattern.getSerializedName()}/${entity.baseColor.getName()}/${entity.patternColor.getName()}"
         is net.minecraft.world.entity.animal.axolotl.Axolotl -> entity.variant.getName()
+        is net.minecraft.world.entity.animal.parrot.Parrot -> entity.variant.getSerializedName()
         else -> null
     }
 
@@ -124,6 +125,9 @@ object BestiaryZoneHighlight {
         // 2026-09-08: every axolotl on the island is a Sepialot; Dustybit is the frog.
         "sepialot"   to EntityRule("axolotl"),
         "dustybit"   to EntityRule("frog"),
+        // Entity dump 2026-09-09: the Blue Jay is a bare parrot (0.5 wide) with an
+        // invisible "/!\" armour stand above it; blue is the only parrot colour seen.
+        "blue jay"   to EntityRule("parrot", variants = setOf("blue")),
     )
 
     /** Entity rules for every mob in the selected zone, keyed by display name. */
