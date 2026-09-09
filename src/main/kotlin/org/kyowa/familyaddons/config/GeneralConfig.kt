@@ -18,7 +18,7 @@ class GeneralConfig {
     }
 
     @Expose @JvmField
-    @ConfigOption(name = "Hypixel API Key", desc = "Your Hypixel API key for rep check. Get one at developer.hypixel.net")
+    @ConfigOption(name = "Hypixel API Key", desc = "Optional. Leave empty to use the mod's own key through its server (recommended). Set one only if you want your requests to use your personal key.")
     @ConfigEditorText
     var hypixelApiKey = ""
 
@@ -42,9 +42,4 @@ class GeneralConfig {
     @ConfigOption(name = "Auto Download Updates", desc = "Keep checking for updates every minute while you play and download new versions in the background, so the next restart already runs them. The launch prompt and chat notification stay as a fallback.")
     @ConfigEditorBoolean
     var autoDownloadUpdates = true
-
-    @Expose @JvmField
-    @ConfigOption(name = "Usage Stats Key", desc = "Owner only: admin key for /fa users and /fa online. Leave blank.")
-    @ConfigEditorText
-    var presenceAdminKey = ""
 }

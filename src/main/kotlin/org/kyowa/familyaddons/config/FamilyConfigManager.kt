@@ -1,5 +1,7 @@
 package org.kyowa.familyaddons.config
 
+import com.google.gson.ExclusionStrategy
+import com.google.gson.FieldAttributes
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -18,8 +20,15 @@ import java.util.concurrent.TimeUnit
 
 object FamilyConfigManager {
 
+    /** Button fields (Runnable) are UI only: never written, and ignored if an old file has them. */
+    private val skipRunnables = object : ExclusionStrategy {
+        override fun shouldSkipField(f: FieldAttributes): Boolean = Runnable::class.java.isAssignableFrom(f.declaredClass)
+        override fun shouldSkipClass(clazz: Class<*>): Boolean = Runnable::class.java.isAssignableFrom(clazz)
+    }
+
     private val gson = GsonBuilder()
         .excludeFieldsWithoutExposeAnnotation()
+        .setExclusionStrategies(skipRunnables)
         .setPrettyPrinting()
         .create()
 
@@ -46,7 +55,13 @@ object FamilyConfigManager {
         // Public build: the Dev category stays in the code and the json, but is
         // dropped from the editor before it is ever built. Dev jar keeps it.
         if (!org.kyowa.familyaddons.util.BuildFlavor.isDev) {
-            processor.allCategories.remove("dev")
+            // MoulConfig keys categories by Field.toString() ("public ...DevConfig ...FamilyConfig.dev"),
+            // so match on the declaring field, not on a bare "dev".
+            val removed = processor.allCategories.entries.removeIf { (key, cat) ->
+                key.substringAfterLast('.') == "dev" ||
+                    (cat as? io.github.notenoughupdates.moulconfig.processor.ProcessedCategoryImpl)?.reflectField?.name == "dev"
+            }
+            org.kyowa.familyaddons.FamilyAddons.LOGGER.info("Config: public build, Dev category ${if (removed) "hidden" else "NOT FOUND"}")
         }
 
         scheduler.scheduleAtFixedRate({ save() }, 60, 60, TimeUnit.SECONDS)
@@ -58,17 +73,48 @@ object FamilyConfigManager {
             save()
             return
         }
-        try {
-            FileReader(configFile).use { fr ->
-                val root = JsonParser.parseReader(fr)
-                migrateLegacyCategories(root)
-                val loaded = gson.fromJson(root, FamilyConfig::class.java)
-                _config = loaded ?: FamilyConfig()
-            }
+        val root: JsonElement = try {
+            FileReader(configFile).use { fr -> JsonParser.parseReader(fr) }
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Unreadable file: keep it for the user, start from defaults.
+            org.kyowa.familyaddons.FamilyAddons.LOGGER.error("Config: could not parse config.json, backing it up and using defaults", e)
+            backupBroken()
             _config = FamilyConfig()
+            return
         }
+        try {
+            migrateLegacyCategories(root)
+            _config = gson.fromJson(root, FamilyConfig::class.java) ?: FamilyConfig()
+        } catch (e: Exception) {
+            // One bad category must not wipe the rest: load category by category and
+            // keep every one that reads cleanly. The original file is kept as a backup.
+            org.kyowa.familyaddons.FamilyAddons.LOGGER.error("Config: full load failed, loading category by category", e)
+            backupBroken()
+            _config = loadLenient(root)
+        }
+    }
+
+    private fun backupBroken() {
+        runCatching {
+            val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(java.util.Date())
+            configFile.copyTo(File(configFile.parentFile, "config.json.broken-$stamp"), overwrite = true)
+        }
+    }
+
+    private fun loadLenient(root: JsonElement): FamilyConfig {
+        val cfg = FamilyConfig()
+        val obj = root as? JsonObject ?: return cfg
+        for (f in FamilyConfig::class.java.declaredFields) {
+            if (!f.isAnnotationPresent(com.google.gson.annotations.Expose::class.java)) continue
+            val el = obj.get(f.name) ?: continue
+            try {
+                f.isAccessible = true
+                gson.fromJson<Any>(el, f.genericType)?.let { f.set(cfg, it) }
+            } catch (e: Exception) {
+                org.kyowa.familyaddons.FamilyAddons.LOGGER.warn("Config: category '${f.name}' unreadable, using defaults for it: ${e.message}")
+            }
+        }
+        return cfg
     }
 
     /**

@@ -19,7 +19,7 @@ val COLOR_CODE_REGEX = Regex("§.")
 object FamilyAddons : ClientModInitializer {
 
     val LOGGER = LoggerFactory.getLogger("FamilyAddons")
-    const val VERSION = "1.0.8"
+    const val VERSION = "1.1.0"
     const val MC_VERSION = "26.2"
 
     private var hudEditorMouseWasDown = false
@@ -28,6 +28,7 @@ object FamilyAddons : ClientModInitializer {
     override fun onInitializeClient() {
         LOGGER.info("FamilyAddons $VERSION loading (${org.kyowa.familyaddons.util.BuildFlavor.name} build)...")
 
+        org.kyowa.familyaddons.util.HypixelLocation.register()
         AutoUpdater.register()
         UsageHeartbeat.register()
 
@@ -70,6 +71,7 @@ object FamilyAddons : ClientModInitializer {
         EntityHighlight.register()
         ShulkerBoxHighlight.register()
         SparklingCritterHighlight.register()
+        FloorDropHighlight.register()
         PickaxeAbility.register()
         WorldScanner.register()
 
@@ -104,6 +106,7 @@ object FamilyAddons : ClientModInitializer {
         DiscordTickets.register()
         HelixWaypoints.register()
         NameStyle.register()
+        NameSync.register()
 
         // Chat filter + translator LAST: Fabric's ALLOW_GAME stops calling
         // listeners once one hides a line, so anything registered after a

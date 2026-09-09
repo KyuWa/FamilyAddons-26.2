@@ -15,6 +15,7 @@ import org.kyowa.familyaddons.COLOR_CODE_REGEX
 import org.kyowa.familyaddons.KeyFetcher
 import org.kyowa.familyaddons.FamilyAddons
 import org.kyowa.familyaddons.config.FamilyConfigManager
+import org.kyowa.familyaddons.util.HypixelLocation
 
 object BestiaryZoneHighlight {
 
@@ -141,9 +142,63 @@ object BestiaryZoneHighlight {
 
     /** NEU key of the zone selected in the config, or null for None/unknown. */
     private fun currentZoneKey(): String? {
-        val idx = FamilyConfigManager.config.highlight.bestiaryZone
+        val idx = resolvedZoneIndex()
         if (idx <= 0 || idx >= ZONES.size) return null
         return ZONE_TO_NEU_KEY[ZONES[idx]]
+    }
+
+    // ── Auto zone ──────────────────────────────────────────────────────
+    // Dropdown index 0 = "Auto": the zone follows the area you stand in,
+    // from the Hypixel Mod API when it has reported, else the tab list.
+    // Polled every 20 ticks; -1 = area unknown or not a bestiary zone.
+    @Volatile private var autoZoneIndex: Int = -1
+    private var autoTicker = 0
+
+    /** The zone in effect: the picked one, or the area-derived one under Auto. */
+    fun resolvedZoneIndex(): Int {
+        val sel = FamilyConfigManager.config.highlight.bestiaryZone
+        return if (sel != 0) sel else autoZoneIndex
+    }
+
+    /** Human-readable auto state for debug output. */
+    fun autoZoneName(): String = autoZoneIndex.takeIf { it > 0 }?.let { ZONES[it] } ?: "none"
+
+    private fun zoneIndexForArea(area: String?, mode: String?): Int {
+        val m = mode?.lowercase()
+        if (m == "dungeon") return ZONES.indexOf("The Catacombs")
+        if (m == "kuudra") return ZONES.indexOf("Kuudra")
+        val a = area?.lowercase()?.trim() ?: return -1
+        val name = when {
+            a.contains("private island") || a == "your island" -> "Island"
+            a.contains("dungeon hub") -> "Hub"
+            a.contains("catacombs") || a == "dungeon" -> "The Catacombs"
+            a.contains("hub") -> "Hub"
+            a.contains("farming") -> "The Farming Lands"
+            a.contains("garden") -> "The Garden"
+            a.contains("spider") -> "Spider's Den"
+            a == "the end" || a.endsWith(" end") -> "The End"
+            a.contains("crimson") -> "Crimson Isle"
+            a.contains("deep caverns") -> "Deep Caverns"
+            a.contains("dwarven") -> "Dwarven Mines"
+            a.contains("crystal hollows") -> "Crystal Hollows"
+            a == "the park" || a == "park" -> "The Park"
+            a.contains("galatea") || a.contains("moonglade") -> "Moonglade Marsh"
+            a.contains("jerry") -> "Jerry"
+            a.contains("kuudra") -> "Kuudra"
+            a.contains("torrhus") -> "Torrhus Canyon"
+            a.contains("lotus") -> "Lotus Atoll"
+            a.contains("safari") -> "Critter Safari"
+            else -> return -1
+        }
+        return ZONES.indexOf(name)
+    }
+
+    private fun pollAutoZone() {
+        val next = zoneIndexForArea(HypixelLocation.areaName(), HypixelLocation.mode)
+        if (next != autoZoneIndex) {
+            autoZoneIndex = next
+            FamilyAddons.LOGGER.info("BestiaryZoneHighlight: auto zone -> ${autoZoneName()} (area '${HypixelLocation.areaName()}', ${HypixelLocation.source()})")
+        }
     }
 
     /** Names persisted as maxed for [zoneKey]. */
@@ -312,10 +367,13 @@ object BestiaryZoneHighlight {
         ClientTickEvents.END_CLIENT_TICK.register { _ ->
             val cfg = FamilyConfigManager.config.highlight
 
-            val zoneChanged = cfg.bestiaryZone != lastZoneIndex
+            if (cfg.bestiaryZone == 0 && cfg.zoneHighlightEnabled && ++autoTicker >= 20) { autoTicker = 0; pollAutoZone() }
+            val zone = resolvedZoneIndex()
+
+            val zoneChanged = zone != lastZoneIndex
             val enabledChanged = cfg.zoneHighlightEnabled != lastZoneHighlightEnabled
             val hideMaxedChanged = cfg.hideMaxedMobs != lastHideMaxed
-            lastZoneIndex = cfg.bestiaryZone
+            lastZoneIndex = zone
             lastZoneHighlightEnabled = cfg.zoneHighlightEnabled
             lastHideMaxed = cfg.hideMaxedMobs
 
@@ -323,7 +381,8 @@ object BestiaryZoneHighlight {
                 if (activeMobNames.isNotEmpty()) { activeMobNames = emptySet(); allZoneMobNames = emptySet() }
                 return@register
             }
-            if (cfg.bestiaryZone == 0) {
+            if (zone <= 0) {
+                // Auto with no recognised area (or a zone we do not track): nothing to highlight.
                 if (activeMobNames.isNotEmpty()) { activeMobNames = emptySet(); allZoneMobNames = emptySet() }
                 return@register
             }
@@ -351,7 +410,7 @@ object BestiaryZoneHighlight {
                 loadCustomIfChanged()
 
                 val cfg = FamilyConfigManager.config.highlight
-                val zoneIndex = cfg.bestiaryZone
+                val zoneIndex = resolvedZoneIndex()
                 if (zoneIndex <= 0 || zoneIndex >= ZONES.size) { activeMobNames = emptySet(); return@runAsync }
                 val zoneName = ZONES[zoneIndex]
                 val neuKey = ZONE_TO_NEU_KEY[zoneName] ?: run {
@@ -394,12 +453,11 @@ object BestiaryZoneHighlight {
 
                 checkMaxFromTablist()
 
-                val apiKey = KeyFetcher.getApiKey()
-                if (!apiKey.isNullOrBlank()) {
+                run {
                     val player = Minecraft.getInstance().player
                     if (player != null) {
                         val uuid = player.gameProfile.id.toString().replace("-", "")
-                        val data = get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid&key=$apiKey")
+                        val data = KeyFetcher.fetchProfiles(uuid)
                         if (data?.get("success")?.asBoolean == true) {
                             val profiles = data.getAsJsonArray("profiles")
                             val profile = profiles?.map { it.asJsonObject }
@@ -873,10 +931,9 @@ object BestiaryZoneHighlight {
 
                 // Try to find API kill ids for the missing mobs by name pattern.
                 var killsObj: JsonObject? = null
-                val apiKey = KeyFetcher.getApiKey()
-                if (!apiKey.isNullOrBlank() && missing.isNotEmpty()) {
+                if (missing.isNotEmpty()) {
                     val uuid = player.gameProfile.id.toString().replace("-", "")
-                    val data = get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid&key=$apiKey")
+                    val data = KeyFetcher.fetchProfiles(uuid)
                     if (data?.get("success")?.asBoolean == true) {
                         val profiles = data.getAsJsonArray("profiles")
                         val profile = profiles?.map { it.asJsonObject }
@@ -966,13 +1023,11 @@ object BestiaryZoneHighlight {
      */
     fun dumpKillIds(filter: String) {
         val player = Minecraft.getInstance().player ?: return
-        val apiKey = KeyFetcher.getApiKey()
-        if (apiKey.isNullOrBlank()) { chat("§cNo API key set. Set it in /fa > General."); return }
         chat("§7Fetching bestiary kill ids...")
         CompletableFuture.runAsync {
             try {
                 val uuid = player.gameProfile.id.toString().replace("-", "")
-                val data = get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid&key=$apiKey")
+                val data = KeyFetcher.fetchProfiles(uuid)
                 if (data?.get("success")?.asBoolean != true) { chat("§cAPI error."); return@runAsync }
                 val profiles = data.getAsJsonArray("profiles")
                 val profile = profiles?.map { it.asJsonObject }

@@ -1,61 +1,72 @@
 package org.kyowa.familyaddons
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import org.kyowa.familyaddons.config.FamilyConfigManager
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
 
+/**
+ * Hypixel API access without shipping a key.
+ *
+ * The key never leaves Cloudflare: the mod asks the key worker for the data
+ * it needs ("profiles for this uuid") and the worker makes the Hypixel call
+ * with the key it holds as a secret, caches the answer briefly and rate-limits
+ * per uuid. A player who set their own key under General > Hypixel API Key
+ * bypasses the worker and calls Hypixel directly with it.
+ *
+ * [SECRET_TOKEN] is the shared gate for all the mod's workers (key, translate,
+ * presence). It is in the jar, so it is a speed bump, not a secret: the worker
+ * side rate limits and never returns anything sensitive.
+ */
 object KeyFetcher {
 
-    private const val WORKER_URL = "https://key.kyowa.uk/"
-    // Shared with the other workers (translator) so one secret gates them all.
+    private const val WORKER_URL = "https://key.kyowa.uk"
     const val SECRET_HEADER = "X-FA-Secret"
     const val SECRET_TOKEN = "41d050ef-7801-47bd-880e-f0e052a3bbc3"
 
-    private val client = HttpClient.newHttpClient()
-    private var fetchedKey: String? = null
-    private var fetchAttempted = false
+    private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(8)).build()
 
-    // Returns user's manual key if set, otherwise the fetched key
-    fun getApiKey(): String? {
-        val configKey = FamilyConfigManager.config.general.hypixelApiKey.takeIf { it.isNotBlank() }
-        if (configKey != null) return configKey
+    /** The player's own key from the config, or null. No fetching: keys are not handed out any more. */
+    fun getApiKey(): String? = FamilyConfigManager.config.general.hypixelApiKey.takeIf { it.isNotBlank() }
 
-        // If not fetched yet, try fetching synchronously as fallback
-        if (!fetchAttempted) fetchNow()
-        return fetchedKey
-    }
+    /** Kept for callers that used to warm the cache; nothing to prefetch now. */
+    fun fetchIfNeeded() {}
 
-    fun fetchIfNeeded() {
-        Thread {
-            fetchNow()
-        }.also { it.isDaemon = true }.start()
-    }
-
-    private fun fetchNow() {
-        fetchAttempted = true
-        try {
-            val request = HttpRequest.newBuilder()
-                .uri(URI(WORKER_URL))
-                .header(SECRET_HEADER, SECRET_TOKEN)
-                .GET()
-                .build()
-            val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-            if (response.statusCode() == 200) {
-                val json = com.google.gson.JsonParser.parseString(response.body()).asJsonObject
-                val key = json.get("hypixel_api_key")?.asString
-                if (!key.isNullOrBlank()) {
-                    fetchedKey = key
-                    FamilyAddons.LOGGER.info("KeyFetcher: key loaded successfully")
-                } else {
-                    FamilyAddons.LOGGER.warn("KeyFetcher: response had no key")
-                }
+    /**
+     * `/v2/skyblock/profiles` for [uuid] (hex, with or without dashes), as
+     * Hypixel returns it, or null on any failure. Own key → direct; else the
+     * worker proxy. Blocking: call off the render thread.
+     */
+    fun fetchProfiles(uuid: String): JsonObject? {
+        val clean = uuid.replace("-", "").lowercase()
+        val own = getApiKey()
+        return try {
+            val req = if (own != null) {
+                HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.hypixel.net/v2/skyblock/profiles?uuid=$clean"))
+                    .header("API-Key", own)
+                    .header("User-Agent", "FamilyAddons/${FamilyAddons.VERSION}")
+                    .timeout(Duration.ofSeconds(15)).GET().build()
             } else {
-                FamilyAddons.LOGGER.warn("KeyFetcher: HTTP ${response.statusCode()} — ${response.body()}")
+                HttpRequest.newBuilder()
+                    .uri(URI.create("$WORKER_URL/profiles?uuid=$clean"))
+                    .header(SECRET_HEADER, SECRET_TOKEN)
+                    .header("User-Agent", "FamilyAddons/${FamilyAddons.VERSION}")
+                    .timeout(Duration.ofSeconds(15)).GET().build()
             }
+            val resp = client.send(req, HttpResponse.BodyHandlers.ofString())
+            if (resp.statusCode() != 200) {
+                FamilyAddons.LOGGER.warn("KeyFetcher: profiles HTTP ${resp.statusCode()} ${resp.body().take(200)}")
+                return null
+            }
+            JsonParser.parseString(resp.body()).asJsonObject
         } catch (e: Exception) {
-            FamilyAddons.LOGGER.warn("KeyFetcher failed: ${e.message}")
+            FamilyAddons.LOGGER.warn("KeyFetcher: profiles failed: ${e.message}")
+            null
         }
     }
 }

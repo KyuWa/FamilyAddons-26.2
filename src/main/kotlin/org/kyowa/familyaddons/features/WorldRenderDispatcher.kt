@@ -24,6 +24,8 @@ object WorldRenderDispatcher {
                 !KuudraStunWaypoint.hasWaypoint() &&
                 !ShulkerBoxHighlight.hasBoxes() &&
                 !SparklingCritterHighlight.hasTargets() &&
+                !FloorDropHighlight.hasTargets() &&
+                !DungeonHighlight.hasRender() &&
                 !PearlWaypoints.hasWaypoints() &&
                 !PileWaypoints.hasBeams() &&
                 !SupplyWaypoints.hasBeams() &&
@@ -50,6 +52,8 @@ object WorldRenderDispatcher {
             KuudraStunWaypoint.onWorldRender(matrices, collector, camera)
             ShulkerBoxHighlight.onWorldRender(matrices, collector, camera)
             SparklingCritterHighlight.onWorldRender(matrices, collector, camera)
+            FloorDropHighlight.onWorldRender(matrices, collector, camera)
+            DungeonHighlight.onWorldRender(matrices, collector, camera)
             PearlWaypoints.onWorldRender(matrices, collector, camera)
             PileWaypoints.onWorldRender(matrices, collector, camera)
             SupplyWaypoints.onWorldRender(matrices, collector, camera)

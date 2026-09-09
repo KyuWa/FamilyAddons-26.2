@@ -164,6 +164,37 @@ object TestCommand {
                                 1
                             }))
 
+                    // /fa vesktop — is Vesktop up with the debug port, is the bot up: the whole View Ticket chain
+                    .then(literal("vesktop").requires { DevAccess.isDev() }.executes {
+                        DiscordTickets.statusReport()
+                        1
+                    })
+
+                    // /fa vesktoprestart — relaunch Vesktop with the debug port (from the chat hint)
+                    .then(literal("vesktoprestart").requires { DevAccess.isDev() }.executes {
+                        DiscordTickets.restartDiscordWithDebugPort()
+                        1
+                    })
+
+                    // /fa name help — Name Changer syntax (everyone)
+                    .then(literal("name").then(literal("help").executes { org.kyowa.familyaddons.features.NameSync.help(); 1 }))
+
+                    // /fa names — owner: pending custom-name requests with approve/deny buttons
+                    .then(literal("names").requires { DevAccess.isDev() }.executes { org.kyowa.familyaddons.features.NameSync.listPending(); 1 }
+                        .then(literal("live").executes { org.kyowa.familyaddons.features.NameSync.listApproved(); 1 }))
+                    .then(literal("namerevoke").requires { DevAccess.isDev() }
+                        .then(argument("uuid", StringArgumentType.word()).executes { ctx ->
+                            org.kyowa.familyaddons.features.NameSync.revoke(StringArgumentType.getString(ctx, "uuid")); 1
+                        }))
+                    .then(literal("nameapprove").requires { DevAccess.isDev() }
+                        .then(argument("uuid", StringArgumentType.word()).executes { ctx ->
+                            org.kyowa.familyaddons.features.NameSync.review(StringArgumentType.getString(ctx, "uuid"), true); 1
+                        }))
+                    .then(literal("namedeny").requires { DevAccess.isDev() }
+                        .then(argument("uuid", StringArgumentType.word()).executes { ctx ->
+                            org.kyowa.familyaddons.features.NameSync.review(StringArgumentType.getString(ctx, "uuid"), false); 1
+                        }))
+
                     // /fa tickets — ticket bridge state
                     .then(literal("tickets").requires { DevAccess.isDev() }.executes {
                         Minecraft.getInstance().player?.sendSystemMessage(Component.literal(DiscordTickets.debugDump().trimEnd()))

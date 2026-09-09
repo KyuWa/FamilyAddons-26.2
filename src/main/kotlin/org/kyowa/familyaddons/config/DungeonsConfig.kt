@@ -54,6 +54,12 @@ class DungeonsConfig {
 
     @Expose @JvmField
     @ConfigAccordionId(id = 1)
+    @ConfigOption(name = "Extra Boxes", desc = "Also draw a wireframe box on every highlighted mob, on top of the outline. The outline itself already reaches any distance.")
+    @ConfigEditorBoolean
+    var dungeonHighlightBoxes = false
+
+    @Expose @JvmField
+    @ConfigAccordionId(id = 1)
     @ConfigOption(name = "Highlight Starred Mobs", desc = "Highlights starred (✯) dungeon mobs, including Shadow Assassins.")
     @ConfigEditorBoolean
     var dungeonHighlightStar = true

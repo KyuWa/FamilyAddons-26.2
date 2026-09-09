@@ -41,12 +41,6 @@ object PartyRepCheck {
     }
 
     fun fetchRep(ign: String) {
-        val apiKey = org.kyowa.familyaddons.KeyFetcher.getApiKey()
-        if (apiKey.isNullOrBlank()) {
-            chatInvalidKey()
-            return
-        }
-
         CompletableFuture.runAsync {
             try {
                 val mojang = get("https://api.mojang.com/users/profiles/minecraft/$ign") ?: run {
@@ -56,7 +50,7 @@ object PartyRepCheck {
                     chat("§cCould not resolve UUID for $ign"); return@runAsync
                 }
 
-                val data = get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid&key=$apiKey") ?: run {
+                val data = org.kyowa.familyaddons.KeyFetcher.fetchProfiles(uuid) ?: run {
                     chat("§cNo response from Hypixel API"); return@runAsync
                 }
 

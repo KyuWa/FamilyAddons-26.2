@@ -50,15 +50,8 @@ class DevConfig {
     @ConfigEditorColour
     var helixTracerColor = "0:230:255:170:0"
 
-    @Expose @JvmField
-    @ConfigOption(name = "Name Style", desc = "Draw KyoWaa in the FamilyAddons purple gradient in chat, tab and nametag on this screen. Everyone else's client always does.")
-    @ConfigEditorBoolean
-    var nameStyle = true
 
-    @Expose @JvmField
-    @ConfigOption(name = "Name Changer", desc = "Owner only, your screen only: what your IGN is shown as in chat, tab and nametag. & colour codes work (e.g. &d&lKyo). Empty = off.")
-    @ConfigEditorText
-    var nameChanger = ""
+
 
     @Expose @JvmField
     @ConfigOption(name = "Grab Scoreboard", desc = "Press to print all sidebar scoreboard entries to chat.")
@@ -79,4 +72,9 @@ class DevConfig {
     @ConfigOption(name = "Copy Raw Chat", desc = "Press while hovering over a chat message to copy its raw text.")
     @ConfigEditorKeybind(defaultKey = GLFW.GLFW_KEY_UNKNOWN)
     var copyRawChatKey = GLFW.GLFW_KEY_UNKNOWN
+
+    @Expose @JvmField
+    @ConfigOption(name = "Admin Key", desc = "Admin key for /fa users, /fa online, name approvals and revokes (the workers' ADMIN_KEY secret).")
+    @ConfigEditorText
+    var presenceAdminKey = ""
 }

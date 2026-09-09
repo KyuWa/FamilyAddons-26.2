@@ -3,6 +3,9 @@ package org.kyowa.familyaddons.features
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.SubmitNodeCollector
+import net.minecraft.client.Camera
+import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.ambient.Bat
 import net.minecraft.world.entity.boss.wither.WitherBoss
@@ -28,7 +31,9 @@ import org.kyowa.familyaddons.config.FamilyConfigManager
  */
 object DungeonHighlight {
 
-    private const val SCAN_INTERVAL = 10
+    // Backup rebuild; the packet hook (DungeonEntityPacketMixin) classifies
+    // new mobs instantly, this only catches anything it missed.
+    private const val SCAN_INTERVAL = 4
 
     private val dungeonMobSpawns = hashSetOf(
         "Lurker", "Dreadlord", "Souleater", "Zombie", "Skeleton", "Skeletor",
@@ -82,16 +87,33 @@ object DungeonHighlight {
 
         val level = client.level ?: return
         val player = client.player ?: return
-        val config = cfg()
 
         outlineColors.clear()
+        for (entity in level.entitiesForRendering()) classify(entity, player)
+    }
 
+    /**
+     * Packet hook: an entity just spawned or had its metadata (name) set.
+     * Classify it right away so a starred mob lights up the tick its nametag
+     * arrives instead of up to a scan later.
+     */
+    fun onEntityUpdate(id: Int) {
+        if (!inDungeon || !cfg().dungeonHighlightEnabled) return
+        val client = Minecraft.getInstance()
+        val level = client.level ?: return
+        val player = client.player ?: return
+        val entity = level.getEntity(id) ?: return
+        classify(entity, player)
+    }
+
+    private fun classify(entity: Entity, player: Player) {
+        val config = cfg()
         val starredColor = parseColor(config.dungeonHighlightColor, 0xFFFFFFFF.toInt())
         val witherColor  = parseColor(config.dungeonWitherColor,    0xFFFF0000.toInt())
         val batColor     = parseColor(config.dungeonBatColor,       0xFF00FFFF.toInt())
-
-        for (entity in level.entitiesForRendering()) {
-            if (!entity.isAlive) continue
+        run {
+            val entity = entity
+            if (!entity.isAlive) return
             when {
                 config.dungeonHighlightWithers && entity is WitherBoss && entity.isPowered -> {
                     outlineColors[entity.id] = witherColor
@@ -116,12 +138,67 @@ object DungeonHighlight {
                 }
 
                 config.dungeonHighlightStar && entity is ArmorStand -> {
-                    val rawName = entity.customName?.string?.replace(COLOR_CODE_REGEX, "") ?: continue
+                    val rawName = entity.customName?.string?.replace(COLOR_CODE_REGEX, "") ?: return
                     if (dungeonMobSpawns.any(rawName::contains) && starredRegex.matches(rawName)) {
                         resolveMob(entity)?.let { outlineColors[it.id] = starredColor }
                     }
                 }
             }
+        }
+    }
+
+    /** Render-distance override (DungeonOutlineRangeMixin): is this mob one we outline? */
+    fun isHighlighted(entity: Entity): Boolean =
+        inDungeon && cfg().dungeonHighlightEnabled && outlineColors.containsKey(entity.id)
+
+    // ── Boxes at any distance ─────────────────────────────────────────
+    // The glow outline only exists for entities Minecraft actually renders, so
+    // a starred mob past the entity render distance (or culled) gets nothing.
+    // These boxes come from our own world pass and follow the mob anywhere it
+    // is loaded, through walls.
+
+    fun hasRender(): Boolean = inDungeon && cfg().dungeonHighlightEnabled && cfg().dungeonHighlightBoxes && outlineColors.isNotEmpty()
+
+    fun onWorldRender(matrices: PoseStack, collector: SubmitNodeCollector, camera: Camera) {
+        if (!hasRender()) return
+        val mc = Minecraft.getInstance()
+        val level = mc.level ?: return
+
+        val partial = mc.deltaTracker.getGameTimeDeltaPartialTick(true)
+        val cam = camera.position()
+        matrices.pushPose()
+        matrices.translate(-cam.x, -cam.y, -cam.z)
+        for ((id, argb) in outlineColors.entries.toList()) {
+            val e = level.getEntity(id) ?: continue
+            if (!e.isAlive) continue
+            val r = ((argb shr 16) and 0xFF) / 255f; val g = ((argb shr 8) and 0xFF) / 255f; val b = (argb and 0xFF) / 255f
+            val lerp = e.getPosition(partial).subtract(e.position())
+            val box = e.boundingBox.inflate(0.05).move(lerp)
+            val x1 = box.minX.toFloat(); val y1 = box.minY.toFloat(); val z1 = box.minZ.toFloat()
+            val x2 = box.maxX.toFloat(); val y2 = box.maxY.toFloat(); val z2 = box.maxZ.toFloat()
+            collector.submitCustomGeometry(matrices, FamilyRenderTypes.LINES) { pose, buf -> boxEdges(buf, pose, x1, y1, z1, x2, y2, z2, r, g, b, 1f) }
+            collector.submitCustomGeometry(matrices, FamilyRenderTypes.LINES_NO_DEPTH) { pose, buf -> boxEdges(buf, pose, x1, y1, z1, x2, y2, z2, r, g, b, 0.45f) }
+        }
+        matrices.popPose()
+    }
+
+    private fun boxEdges(
+        buf: com.mojang.blaze3d.vertex.VertexConsumer, entry: PoseStack.Pose,
+        x1: Float, y1: Float, z1: Float, x2: Float, y2: Float, z2: Float,
+        r: Float, g: Float, b: Float, a: Float,
+    ) {
+        val edges = arrayOf(
+            floatArrayOf(x1,y1,z1,x2,y1,z1), floatArrayOf(x2,y1,z1,x2,y1,z2),
+            floatArrayOf(x2,y1,z2,x1,y1,z2), floatArrayOf(x1,y1,z2,x1,y1,z1),
+            floatArrayOf(x1,y2,z1,x2,y2,z1), floatArrayOf(x2,y2,z1,x2,y2,z2),
+            floatArrayOf(x2,y2,z2,x1,y2,z2), floatArrayOf(x1,y2,z2,x1,y2,z1),
+            floatArrayOf(x1,y1,z1,x1,y2,z1), floatArrayOf(x2,y1,z1,x2,y2,z1),
+            floatArrayOf(x2,y1,z2,x2,y2,z2), floatArrayOf(x1,y1,z2,x1,y2,z2)
+        )
+        for (ed in edges) {
+            val dx = ed[3]-ed[0]; val dy = ed[4]-ed[1]; val dz = ed[5]-ed[2]
+            buf.addVertex(entry, ed[0], ed[1], ed[2]).setColor(r, g, b, a).setNormal(entry, dx, dy, dz).setLineWidth(2.0f)
+            buf.addVertex(entry, ed[3], ed[4], ed[5]).setColor(r, g, b, a).setNormal(entry, dx, dy, dz).setLineWidth(2.0f)
         }
     }
 

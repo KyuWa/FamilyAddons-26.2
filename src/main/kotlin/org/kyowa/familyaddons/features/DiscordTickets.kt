@@ -206,13 +206,14 @@ object DiscordTickets {
             val viaCdp = try {
                 java.util.concurrent.CompletableFuture.supplyAsync { cdpNavigate(t) }.get(3, java.util.concurrent.TimeUnit.SECONDS)
             } catch (_: Exception) { false }
-            if (viaCdp) return@Thread
+            if (viaCdp) { focusDiscordWindow(); return@Thread }
+            warnIfDebugPortClosed()
             // 1. In-app navigation over the client's local RPC pipe (works while the
             //    app is already running; Vesktop needs its "Rich Presence" setting on).
             val viaRpc = try {
                 java.util.concurrent.CompletableFuture.supplyAsync { rpcDeepLink(t) }.get(2, java.util.concurrent.TimeUnit.SECONDS)
             } catch (_: Exception) { false }
-            if (viaRpc) return@Thread
+            if (viaRpc) { focusDiscordWindow(); return@Thread }
             // 2. discord:// deep link handed to the registered app (official client
             //    navigates; Vesktop only focuses when already running).
             // 3. The web link.
@@ -224,6 +225,155 @@ object DiscordTickets {
                 try { launch(web) } catch (e2: Exception) { FaChat.send("§cCould not open Discord: §7${e2.message}") }
             }
         }, "FA-Tickets-Open").apply { isDaemon = true; start() }
+    }
+
+    // ── Window focus ──────────────────────────────────────────────────────
+    // Windows only lets the foreground process (the game, while you are playing)
+    // hand the foreground to someone else; a request from inside Discord itself
+    // just flashes the taskbar. So after an in-app navigation the GAME brings the
+    // Discord window forward, via the JNA that Minecraft already ships.
+
+    /** Exe file name of the registered discord:// handler ("vesktop.exe" / "Discord.exe"), or null. */
+    private fun discordExeName(): String? = findDiscordHandler()?.firstOrNull()?.let { java.io.File(it).name }
+
+    private fun focusDiscordWindow(): Boolean {
+        if (!System.getProperty("os.name", "").lowercase().contains("win")) return false
+        val exe = (discordExeName() ?: "vesktop.exe").lowercase()
+        return try {
+            val pids = ProcessHandle.allProcesses()
+                .filter { it.info().command().orElse("").lowercase().endsWith("\\" + exe) }
+                .map { it.pid() }.toList().toSet()
+            if (pids.isEmpty()) return false
+            val u = com.sun.jna.platform.win32.User32.INSTANCE
+            var found: com.sun.jna.platform.win32.WinDef.HWND? = null
+            u.EnumWindows(
+                com.sun.jna.platform.win32.WinUser.WNDENUMPROC { hwnd, _ ->
+                    val ref = com.sun.jna.ptr.IntByReference()
+                    u.GetWindowThreadProcessId(hwnd, ref)
+                    if (ref.value.toLong() in pids && u.IsWindowVisible(hwnd) && u.GetWindowTextLength(hwnd) > 0) {
+                        found = hwnd; false
+                    } else true
+                },
+                null,
+            )
+            val h = found ?: return false
+            val wp = com.sun.jna.platform.win32.WinUser.WINDOWPLACEMENT()
+            if (u.GetWindowPlacement(h, wp).booleanValue() && wp.showCmd == com.sun.jna.platform.win32.WinUser.SW_SHOWMINIMIZED) {
+                u.ShowWindow(h, com.sun.jna.platform.win32.WinUser.SW_RESTORE)
+            }
+            u.SetForegroundWindow(h)
+        } catch (e: Throwable) {
+            FamilyAddons.LOGGER.warn("[FA Tickets] focus failed: ${e.message}")
+            false
+        }
+    }
+
+    private fun debugPort(): Int = FamilyConfigManager.config.dev.discordDebugPort.trim().toIntOrNull() ?: 0
+
+    private fun portOpen(port: Int): Boolean = try {
+        Socket().use { it.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), port), 300) }; true
+    } catch (_: Exception) { false }
+
+    /**
+     * Vesktop keeps getting launched without the flag (Windows' restart-apps
+     * after a crash, its own relaunches): when the port is set but closed, say
+     * so and offer a one-click relaunch instead of silently falling back.
+     */
+    private fun warnIfDebugPortClosed() {
+        val port = debugPort()
+        if (port <= 0 || portOpen(port)) return
+        val exe = discordExeName() ?: return
+        if (!exe.contains("vesktop", ignoreCase = true)) return
+        val mc = Minecraft.getInstance()
+        mc.execute {
+            val line = Component.literal("§eVesktop is running without the debug port §7(§f$port§7), so View Ticket can only focus it. ")
+                .append(button("[Relaunch Vesktop with it]", "§a", ClickEvent.RunCommand("/fa vesktoprestart"), "Quit Vesktop and start it with --remote-debugging-port=$port"))
+            mc.player?.sendSystemMessage(FaChat.prefixed(line))
+        }
+    }
+
+    /**
+     * `/fa vesktop`: one line per link in the View Ticket chain, so a failed
+     * jump can be diagnosed without leaving the game.
+     */
+    fun statusReport() {
+        if (!enabled()) return
+        Thread({
+            val port = debugPort()
+            val handler = findDiscordHandler()?.firstOrNull()
+            val exe = handler?.let { java.io.File(it).name } ?: "(none registered)"
+            val exeLower = exe.lowercase()
+            val running = try {
+                ProcessHandle.allProcesses().anyMatch { it.info().command().orElse("").lowercase().endsWith("\\" + exeLower) }
+            } catch (_: Exception) { false }
+            val portUp = port > 0 && portOpen(port)
+            var page: String? = null
+            if (portUp) {
+                try {
+                    val body = java.net.http.HttpClient.newHttpClient().send(
+                        java.net.http.HttpRequest.newBuilder(URI.create("http://127.0.0.1:$port/json")).timeout(java.time.Duration.ofSeconds(1)).GET().build(),
+                        java.net.http.HttpResponse.BodyHandlers.ofString(),
+                    ).body()
+                    page = JsonParser.parseString(body).asJsonArray.map { it.asJsonObject }
+                        .firstOrNull { it.get("type")?.asString == "page" && (it.get("url")?.asString ?: "").contains("discord.com") }
+                        ?.get("url")?.asString
+                } catch (_: Exception) {}
+            }
+            val rpc = (0..9).any { i -> try { java.io.RandomAccessFile("""\\\\.\\pipe\\discord-ipc-$i""", "r").close(); true } catch (_: Exception) { false } }
+            val botUp = portOpen(CLAIM_PORT)
+            val listening = serverSocket?.let { !it.isClosed } ?: false
+
+            fun ok(b: Boolean) = if (b) "§a✔" else "§c✘"
+            val lines = mutableListOf<Component>()
+            lines += Component.literal("§d[FA Vesktop check]")
+            lines += Component.literal("${ok(handler != null)} §7discord:// handler: §f$exe")
+            lines += Component.literal("${ok(running)} §7$exe running")
+            lines += Component.literal("${ok(port > 0)} §7Discord Debug Port set: §f${if (port > 0) port else "0 (off)"}")
+            lines += Component.literal("${ok(portUp)} §7debug port $port reachable" + (if (port > 0 && running && !portUp) " §8(launched without the flag)" else ""))
+            lines += Component.literal("${ok(page != null)} §7Discord page on the port: §f${page ?: "-"}")
+            lines += Component.literal("${ok(rpc)} §7RPC pipe (arRPC / Rich Presence)")
+            lines += Component.literal("${ok(botUp)} §7bot.py claim port $CLAIM_PORT")
+            lines += Component.literal("${ok(listening)} §7mod ticket listener on $LISTEN_PORT")
+            val verdict = when {
+                page != null -> "§aView Ticket will jump inside the app and focus it."
+                portUp -> "§eDebug port is up but Discord's page is not loaded yet, wait a few seconds."
+                port > 0 && running -> "§cVesktop is running without the debug port: View Ticket can only focus it."
+                port > 0 -> "§cVesktop is not running."
+                else -> "§eNo debug port configured: View Ticket uses the deep link / focus fallback."
+            }
+            lines += Component.literal(verdict)
+            if (port > 0 && running && !portUp && exeLower.contains("vesktop")) {
+                lines += Component.literal("§7Fix: ").append(button("[Relaunch Vesktop with the port]", "§a", ClickEvent.RunCommand("/fa vesktoprestart"), "Quit Vesktop and start it with --remote-debugging-port=$port"))
+            }
+            val mc = Minecraft.getInstance()
+            mc.execute { val pl = mc.player ?: return@execute; lines.forEach { pl.sendSystemMessage(FaChat.prefixed(it)) } }
+        }, "FA-Tickets-Status").apply { isDaemon = true; start() }
+    }
+
+    /** `/fa vesktoprestart`: quit every vesktop.exe and start it again with the debug flag. */
+    fun restartDiscordWithDebugPort() {
+        if (!enabled()) return
+        val port = debugPort()
+        val exePath = findDiscordHandler()?.firstOrNull()
+        if (port <= 0 || exePath == null || !exePath.contains("vesktop", ignoreCase = true)) {
+            FaChat.send("§cNeed a Discord Debug Port and Vesktop as the discord:// handler."); return
+        }
+        Thread({
+            try {
+                val exe = java.io.File(exePath).name.lowercase()
+                ProcessHandle.allProcesses()
+                    .filter { it.info().command().orElse("").lowercase().endsWith("\\" + exe) }
+                    .forEach { it.destroyForcibly() }
+                Thread.sleep(2500)
+                // Detached via `start`, with no pipes back to the game: a pipe from
+                // this JVM would break when the game closes and Electron then dies
+                // on its next console write (EPIPE dialog).
+                detached(listOf(exePath, "--remote-debugging-port=$port"))
+                FaChat.send("§aVesktop relaunched with the debug port. Give it ~10 s to load.")
+            } catch (e: Exception) {
+                FaChat.send("§cRelaunch failed: §7${e.message}")
+            }
+        }, "FA-Tickets-Relaunch").apply { isDaemon = true; start() }
     }
 
     /**
@@ -362,7 +512,22 @@ object DiscordTickets {
             os.contains("mac") -> listOf("open", url)
             else -> listOf("xdg-open", url)
         }
-        ProcessBuilder(cmd).redirectErrorStream(true).start()
+        detached(cmd)
+    }
+
+    /**
+     * Launch a program with no stdio tied to this JVM. On Windows it goes
+     * through `cmd /c start ""` so the child is its own process group and
+     * outlives the game; everywhere the streams are discarded, never piped.
+     */
+    private fun detached(cmd: List<String>) {
+        val os = System.getProperty("os.name", "").lowercase()
+        val full = if (os.contains("win")) listOf("cmd", "/c", "start", "") + cmd else cmd
+        ProcessBuilder(full)
+            .redirectInput(ProcessBuilder.Redirect.DISCARD.file().let { ProcessBuilder.Redirect.from(it) })
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
     }
 
     /**

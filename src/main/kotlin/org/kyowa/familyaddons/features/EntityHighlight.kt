@@ -26,7 +26,7 @@ object EntityHighlight {
     private fun bestiaryActive(): Boolean {
         val cfg = FamilyConfigManager.config.highlight
         if (!cfg.enabled) return false
-        if (cfg.zoneHighlightEnabled && cfg.bestiaryZone != 0) return true
+        if (cfg.zoneHighlightEnabled && BestiaryZoneHighlight.resolvedZoneIndex() > 0) return true
         return cfg.mobName.isNotBlank()
     }
 
@@ -34,7 +34,7 @@ object EntityHighlight {
         val cfg = FamilyConfigManager.config.highlight
         if (!cfg.enabled) return false
         if (cfg.mobNames.isNotBlank()) return true
-        if (cfg.zoneHighlightEnabled && cfg.bestiaryZone != 0) return true
+        if (cfg.zoneHighlightEnabled && BestiaryZoneHighlight.resolvedZoneIndex() > 0) return true
         return cfg.mobName.isNotBlank()
     }
 

@@ -70,6 +70,10 @@ class FamilyConfig : Config() {
     var playerDisguise = PlayerDisguiseConfig()
 
     @Expose @JvmField
+    @Category(name = "Name Changer", desc = "Your custom display name, seen by everyone with the mod once approved")
+    var nameChanger = NameChangerConfig()
+
+    @Expose @JvmField
     @Category(name = "Dev", desc = "Developer debug tools")
     var dev = DevConfig()
 }

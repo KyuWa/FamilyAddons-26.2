@@ -58,6 +58,16 @@ class HighlightConfig {
     var sparklingColor = "0:255:255:230:120"
 
     @Expose @JvmField
+    @ConfigOption(name = "Highlight Floor Drops", desc = "Critter Safari: outline the block under a floor drop (the sparkling little item pile on the ground) so you spot it from afar.")
+    @ConfigEditorBoolean
+    var floorDropsEnabled = false
+
+    @Expose @JvmField
+    @ConfigOption(name = "Floor Drop Color", desc = "Color of the floor drop block outline.")
+    @ConfigEditorColour
+    var floorDropsColor = "0:255:80:255:80"
+
+    @Expose @JvmField
     @ConfigOption(name = "Tracer Lines", desc = "Draw lines from your crosshair to the nearest highlighted mobs (shulkers included).")
     @ConfigEditorBoolean
     var tracerEnabled = false
@@ -87,8 +97,8 @@ class HighlightConfig {
     @Expose @JvmField
     @ConfigAccordionId(id = 1)
     @ConfigOption(name = "Bestiary Zone", desc = "Select the zone to highlight bestiary mobs for. Fishing includes all fishing sub-zones (Lava, Backwater Bayou, festivals, Winter).")
-    @ConfigEditorDropdown(values = ["None", "Island", "Hub", "The Farming Lands", "The Garden", "Spider's Den", "The End", "Crimson Isle", "Deep Caverns", "Dwarven Mines", "Crystal Hollows", "The Park", "Moonglade Marsh", "Spooky Festival", "The Catacombs", "Fishing", "Mythological Creatures", "Jerry", "Kuudra", "Torrhus Canyon", "Lotus Atoll", "Critter Safari"])
-    var bestiaryZone = 0  // 0 = None
+    @ConfigEditorDropdown(values = ["Auto (current area)", "Island", "Hub", "The Farming Lands", "The Garden", "Spider's Den", "The End", "Crimson Isle", "Deep Caverns", "Dwarven Mines", "Crystal Hollows", "The Park", "Moonglade Marsh", "Spooky Festival", "The Catacombs", "Fishing", "Mythological Creatures", "Jerry", "Kuudra", "Torrhus Canyon", "Lotus Atoll", "Critter Safari"])
+    var bestiaryZone = 0  // 0 = Auto: zone follows the area you are in
 
     @Expose @JvmField
     @ConfigAccordionId(id = 1)

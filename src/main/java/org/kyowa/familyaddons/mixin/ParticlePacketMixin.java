@@ -22,5 +22,6 @@ public class ParticlePacketMixin {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || !mc.isSameThread()) return;
         SparklingCritterHighlight.INSTANCE.onParticle(packet);
+        org.kyowa.familyaddons.features.FloorDropHighlight.INSTANCE.onParticle(packet);
     }
 }

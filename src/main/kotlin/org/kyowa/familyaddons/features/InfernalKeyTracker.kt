@@ -245,11 +245,6 @@ object InfernalKeyTracker {
 
     fun fetchSacks(silent: Boolean) {
         if (fetching) return
-        val apiKey = KeyFetcher.getApiKey()
-        if (apiKey.isNullOrBlank()) {
-            if (!silent) chat("§cNo API key set. Set it in /fa > General.")
-            return
-        }
 
         fetching = true
         CompletableFuture.runAsync {
@@ -263,7 +258,7 @@ object InfernalKeyTracker {
                     fetching = false; return@runAsync
                 }
 
-                val data = get("https://api.hypixel.net/v2/skyblock/profiles?uuid=$uuid&key=$apiKey")
+                val data = KeyFetcher.fetchProfiles(uuid)
                 if (data?.get("success")?.asBoolean != true) {
                     if (!silent) chat("§cAPI error.")
                     fetching = false; return@runAsync

@@ -73,7 +73,7 @@ object UsageHeartbeat {
 
     /** /fa users | /fa online — owner view of who runs the mod. */
     fun showUsers(onlineOnly: Boolean) {
-        val key = FamilyConfigManager.config.general.presenceAdminKey.trim()
+        val key = FamilyConfigManager.config.dev.presenceAdminKey.trim()
         if (key.isEmpty()) { chat("§cNo usage stats key set. Paste it in /fa > General > Usage Stats Key."); return }
         val path = if (onlineOnly) "/online" else "/users"
         chat("§7Fetching ${if (onlineOnly) "online players" else "all users"}...")

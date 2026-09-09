@@ -1,0 +1,19 @@
+# FamilyAddons name changer worker (shared custom names with owner approval).
+#
+#   cd worker
+#   npx wrangler kv namespace create NAMES -c names.wrangler.toml   (put the id below)
+#   npx wrangler secret put FA_SECRET       -c names.wrangler.toml   (= KeyFetcher.SECRET_TOKEN)
+#   npx wrangler secret put ADMIN_KEY       -c names.wrangler.toml   (= General > Usage Stats Key)
+#   npx wrangler secret put DISCORD_WEBHOOK -c names.wrangler.toml   (optional review pings)
+#   -- or bot mode with real Approve/Deny buttons (Interactions Endpoint URL = <worker>/discord):
+#   npx wrangler secret put DISCORD_BOT_TOKEN  -c names.wrangler.toml
+#   npx wrangler secret put DISCORD_PUBLIC_KEY -c names.wrangler.toml
+#   npx wrangler secret put DISCORD_CHANNEL_ID -c names.wrangler.toml
+#   npx wrangler deploy -c names.wrangler.toml
+name = "fa-names"
+main = "names-worker.js"
+compatibility_date = "2026-09-01"
+
+[[kv_namespaces]]
+binding = "NAMES"
+id = "43930c5808814343aca29b168888cf1c"
