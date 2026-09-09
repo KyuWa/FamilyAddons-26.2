@@ -15,6 +15,7 @@ import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket
 import net.minecraft.world.entity.Display
 import net.minecraft.world.phys.Vec3
 import org.kyowa.familyaddons.config.FamilyConfigManager
+import org.kyowa.familyaddons.util.HypixelLocation
 
 /**
  * Critter Safari "floor drops": a little pile of item-display entities on the
@@ -50,7 +51,9 @@ object FloorDropHighlight {
     private var tick = 0
 
     private fun cfg() = FamilyConfigManager.config.highlight
-    private fun active() = cfg().enabled && cfg().floorDropsEnabled
+    /** Only in the Critter Safari: the Mod API reports the area as "Safari" (tab list: "Critter Safari"). */
+    private fun inSafari() = HypixelLocation.areaName()?.contains("safari", ignoreCase = true) == true
+    private fun active() = cfg().enabled && cfg().floorDropsEnabled && inSafari()
 
     fun hasTargets(): Boolean = active() && targets.isNotEmpty()
 

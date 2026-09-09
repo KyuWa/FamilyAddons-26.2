@@ -58,7 +58,7 @@ class HighlightConfig {
     var sparklingColor = "0:255:255:230:120"
 
     @Expose @JvmField
-    @ConfigOption(name = "Highlight Floor Drops", desc = "Critter Safari: outline the block under a floor drop (the sparkling little item pile on the ground) so you spot it from afar.")
+    @ConfigOption(name = "Highlight Floor Drops", desc = "Outline the block under a floor drop (the sparkling little item pile on the ground) so you spot it from afar. Only active while you are in the Critter Safari.")
     @ConfigEditorBoolean
     var floorDropsEnabled = false
 
