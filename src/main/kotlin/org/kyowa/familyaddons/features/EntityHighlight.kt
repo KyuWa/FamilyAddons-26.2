@@ -11,6 +11,7 @@ import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.kyowa.familyaddons.COLOR_CODE_REGEX
 import org.kyowa.familyaddons.config.FamilyConfigManager
@@ -253,7 +254,7 @@ object EntityHighlight {
                 collector.submitCustomGeometry(matrices, renderType) { entry, buf ->
                     for (entity in targets) {
                         if (!entity.isAlive) continue
-                        val bb = entity.boundingBox
+                        val bb = highlightBox(entity)
                         drawBoxEdges(buf, entry,
                             (bb.minX - cam.x).toFloat(), (bb.minY - cam.y).toFloat(), (bb.minZ - cam.z).toFloat(),
                             (bb.maxX - cam.x).toFloat(), (bb.maxY - cam.y).toFloat(), (bb.maxZ - cam.z).toFloat(),
@@ -270,6 +271,16 @@ object EntityHighlight {
         }
         if (bestiaryActive() && config.bestiaryDrawingStyle == 0 && bestiaryHighlighted.isNotEmpty()) {
             drawBoxes(bestiaryHighlighted - sparklingSet, parseRgb(config.bestiaryColor, Triple(1f, 0.67f, 0f)))
+        }
+        // Outline style cannot show an invisible mob (it is never rendered, so the
+        // outline pass never sees it): fall back to a box for those.
+        if (config.drawingStyle == 1 && highlighted.isNotEmpty()) {
+            val hidden = highlighted.filterTo(HashSet()) { it.isInvisible }
+            if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, Triple(r, g, b))
+        }
+        if (bestiaryActive() && config.bestiaryDrawingStyle == 1 && bestiaryHighlighted.isNotEmpty()) {
+            val hidden = bestiaryHighlighted.filterTo(HashSet()) { it.isInvisible }
+            if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, parseRgb(config.bestiaryColor, Triple(1f, 0.67f, 0f)))
         }
 
         // ── Tracer lines ──────────────────────────────────────────────
@@ -342,6 +353,19 @@ object EntityHighlight {
     }
 
     fun hasHighlighted() = (highlighted.isNotEmpty() || bestiaryHighlighted.isNotEmpty()) && shouldScan()
+
+    /**
+     * Box to draw for [entity]. An invisible mob smaller than a block is a
+     * disguised critter (Duplico = silverfish under a block display): draw the
+     * block it is pretending to be, not its tiny hitbox.
+     */
+    private fun highlightBox(entity: Entity): AABB {
+        val bb = entity.boundingBox
+        if (!entity.isInvisible || bb.xsize >= 1.0 || bb.ysize >= 1.0) return bb
+        val cx = (bb.minX + bb.maxX) / 2.0
+        val cz = (bb.minZ + bb.maxZ) / 2.0
+        return AABB(cx - 0.5, bb.minY, cz - 0.5, cx + 0.5, bb.minY + 1.0, cz + 0.5)
+    }
 
     internal fun drawBoxEdges(
         buf: VertexConsumer,

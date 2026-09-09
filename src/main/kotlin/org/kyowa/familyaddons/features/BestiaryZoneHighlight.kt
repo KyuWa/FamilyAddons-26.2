@@ -128,6 +128,10 @@ object BestiaryZoneHighlight {
         // Entity dump 2026-09-09: the Blue Jay is a bare parrot (0.5 wide) with an
         // invisible "/!\" armour stand above it; blue is the only parrot colour seen.
         "blue jay"   to EntityRule("parrot", variants = setOf("blue")),
+        // Entity dump 2026-09-09: Duplico hides as a block — an INVISIBLE silverfish
+        // (0.4 wide) under an item display + 1.1 interaction box at the same spot.
+        // EntityHighlight draws a full block box for it since the mob never renders.
+        "duplico"    to EntityRule("silverfish"),
     )
 
     /** Entity rules for every mob in the selected zone, keyed by display name. */
