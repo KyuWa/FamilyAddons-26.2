@@ -36,7 +36,7 @@
 
 const OWNER_UUID = "305bcf8c-a93d-4d52-9e8c-b925e8d25682";
 const MAX_VISIBLE = 24;
-const MAX_RAW = 200;
+const MAX_RAW = 400;
 const RL_TTL_S = 600;
 const DECISION_TTL_S = 30 * 24 * 3600;
 const MAX_BODY = 2048; // a submission is ~300 bytes; refuse anything bigger before even reading it

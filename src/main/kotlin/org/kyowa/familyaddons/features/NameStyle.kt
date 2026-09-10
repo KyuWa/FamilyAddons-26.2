@@ -136,8 +136,10 @@ object NameStyle {
     // ── template engine ─────────────────────────────────────────────────
 
     private const val MAX_VISIBLE = 24
-    private const val MAX_RAW = 200
-    private val TAG = Regex("""<(/?)(gradient|wave|rainbow)(?::#([0-9a-fA-F]{6}):#([0-9a-fA-F]{6}))?>|<#([0-9a-fA-F]{6})>|[&§]([0-9a-fk-orA-FK-OR])""")
+    private const val MAX_RAW = 400
+    // <gradient|wave|rainbow:#a:#b:#c...> any number of colour stops (0, 2, 3, ...).
+    private val TAG = Regex("""<(/?)(gradient|wave|rainbow)((?::#[0-9a-fA-F]{6})*)>|<#([0-9a-fA-F]{6})>|[&§]([0-9a-fk-orA-FK-OR])""")
+    private val STOP = Regex("""#([0-9a-fA-F]{6})""")
 
     /** Visible characters only (tags and codes stripped). */
     fun visible(template: String): String = template.replace(TAG, "")
@@ -153,16 +155,16 @@ object NameStyle {
     }
 
     private enum class AnimType { WAVE, RAINBOW }
-    private class Anim(val type: AnimType, val a: Int, val b: Int, val n: Int)
+    private class Anim(val type: AnimType, val stops: IntArray, val n: Int)
     private val anims = ArrayList<Anim>()          // slot -> anim, capped at 255
     private const val MARKER_RED = 0xFA
     private const val PERIOD_MS = 2400.0
 
-    private fun slotFor(type: AnimType, a: Int, b: Int, n: Int): Int {
+    private fun slotFor(type: AnimType, stops: IntArray, n: Int): Int {
         synchronized(anims) {
-            for ((i, x) in anims.withIndex()) if (x.type == type && x.a == a && x.b == b && x.n == n) return i
+            for ((i, x) in anims.withIndex()) if (x.type == type && x.stops.contentEquals(stops) && x.n == n) return i
             if (anims.size >= 255) return -1
-            anims.add(Anim(type, a, b, n)); return anims.size - 1
+            anims.add(Anim(type, stops, n)); return anims.size - 1
         }
     }
 
@@ -184,8 +186,8 @@ object NameStyle {
         val out = Component.empty()
         var color: Int? = null
         var bold = false; var italic = false; var underline = false; var strike = false; var obf = false
-        // open animated/gradient run
-        var run: Triple<AnimType?, Int, Int>? = null  // (null type = static gradient) a, b
+        // open animated/gradient run: (null type = static gradient), colour stops
+        var run: Pair<AnimType?, IntArray>? = null
         val runText = StringBuilder()
         var runStyleSnapshot: Style? = null
 
@@ -203,12 +205,12 @@ object NameStyle {
                 if (r.first == null) {
                     for ((i, ch) in text.withIndex()) {
                         val k = if (n == 1) 0.0 else i.toDouble() / (n - 1)
-                        out.append(Component.literal(ch.toString()).withStyle(st.withColor(lerp(r.second, r.third, k))))
+                        out.append(Component.literal(ch.toString()).withStyle(st.withColor(lerpN(r.second, k))))
                     }
                 } else {
-                    val slot = slotFor(r.first!!, r.second, r.third, n)
+                    val slot = slotFor(r.first!!, r.second, n)
                     for ((i, ch) in text.withIndex()) {
-                        val col = if (slot < 0) lerp(r.second, r.third, i.toDouble() / maxOf(1, n - 1))
+                        val col = if (slot < 0) lerpN(r.second, i.toDouble() / maxOf(1, n - 1))
                                   else (MARKER_RED shl 16) or ((i and 0xFF) shl 8) or (slot and 0xFF)
                         out.append(Component.literal(ch.toString()).withStyle(st.withColor(col)))
                     }
@@ -230,18 +232,26 @@ object NameStyle {
                 g[2].isNotEmpty() -> { // <gradient|wave|rainbow ...> or closing
                     if (g[1] == "/") { flushRun(); continue }
                     flushRun()
-                    val a = g[3].takeIf { it.isNotEmpty() }?.toInt(16) ?: 0xFF0000
-                    val b = g[4].takeIf { it.isNotEmpty() }?.toInt(16) ?: 0x0000FF
-                    run = when (g[2].lowercase()) {
-                        "gradient" -> Triple(null, a, b)
-                        "wave" -> Triple(AnimType.WAVE, a, b)
-                        else -> Triple(AnimType.RAINBOW, 0, 0)
+                    val given = STOP.findAll(g[3]).map { it.groupValues[1].toInt(16) }.toList()
+                    val kind = g[2].lowercase()
+                    // gradient / wave need at least two stops (defaults red -> blue); rainbow
+                    // with no stops is the hue sweep, with stops it cycles through them.
+                    val stops = when {
+                        given.size >= 2 -> given.toIntArray()
+                        kind == "rainbow" -> IntArray(0)
+                        given.size == 1 -> intArrayOf(given[0], given[0])
+                        else -> intArrayOf(0xFF0000, 0x0000FF)
+                    }
+                    run = when (kind) {
+                        "gradient" -> Pair(null, stops)
+                        "wave" -> Pair(AnimType.WAVE, stops)
+                        else -> Pair(AnimType.RAINBOW, stops)
                     }
                     runStyleSnapshot = style()
                 }
-                g[5].isNotEmpty() -> { flushRun(); color = g[5].toInt(16) }
-                g[6].isNotEmpty() -> {
-                    val code = g[6].lowercase()[0]
+                g[4].isNotEmpty() -> { flushRun(); color = g[4].toInt(16) }
+                g[5].isNotEmpty() -> {
+                    val code = g[5].lowercase()[0]
                     when (code) {
                         'l' -> bold = true; 'o' -> italic = true; 'n' -> underline = true; 'm' -> strike = true; 'k' -> obf = true
                         'r' -> { flushRun(); color = null; bold = false; italic = false; underline = false; strike = false; obf = false }
@@ -271,10 +281,28 @@ object NameStyle {
         val pos = i.toDouble() / maxOf(1, anim.n - 1)
         val phase = if (animated()) (System.currentTimeMillis() % PERIOD_MS.toLong()) / PERIOD_MS else 0.0
         val col = when (anim.type) {
-            AnimType.WAVE -> lerp(anim.a, anim.b, 0.5 - 0.5 * Math.cos(2 * Math.PI * (pos - phase)))
-            AnimType.RAINBOW -> java.awt.Color.HSBtoRGB(((pos * 0.6 + phase) % 1.0).toFloat(), 0.85f, 1f) and 0xFFFFFF
+            // Sweeps across every stop and back, so a 3-colour wave shows a -> b -> c -> b -> a.
+            AnimType.WAVE -> lerpN(anim.stops, 0.5 - 0.5 * Math.cos(2 * Math.PI * (pos - phase)))
+            AnimType.RAINBOW ->
+                if (anim.stops.size >= 2) lerpCycle(anim.stops, (pos * 0.6 + phase) % 1.0)
+                else java.awt.Color.HSBtoRGB(((pos * 0.6 + phase) % 1.0).toFloat(), 0.85f, 1f) and 0xFFFFFF
         }
         return style.withColor(col)
+    }
+
+    /** Colour at [t] in 0..1 along a chain of stops (a -> b -> c ...). */
+    private fun lerpN(stops: IntArray, t: Double): Int {
+        if (stops.isEmpty()) return 0xFFFFFF
+        if (stops.size == 1) return stops[0]
+        val k = t.coerceIn(0.0, 1.0) * (stops.size - 1)
+        val i = minOf(k.toInt(), stops.size - 2)
+        return lerp(stops[i], stops[i + 1], k - i)
+    }
+
+    /** Like [lerpN] but the chain loops back to the first stop (a -> b -> c -> a). */
+    private fun lerpCycle(stops: IntArray, t: Double): Int {
+        val loop = stops + stops[0]
+        return lerpN(loop, ((t % 1.0) + 1.0) % 1.0)
     }
 
     private fun lerp(from: Int, to: Int, t: Double): Int {

@@ -19,7 +19,7 @@ class NameChangerConfig {
     var animate = true
 
     @Expose @JvmField
-    @ConfigOption(name = "My Name", desc = "How your IGN should show for everyone with the mod, max 24 visible characters. Codes: &a &l &n &o &r, <#ff8800>, <gradient:#a:#b>text</gradient>, <wave:#a:#b>text</wave> (moving band), <rainbow>text</rainbow>. Run /fa name help for examples.")
+    @ConfigOption(name = "My Name", desc = "How your IGN should show for everyone with the mod, max 24 visible characters. Codes: &a &l &n &o &r, <#ff8800>, <gradient:#a:#b>text</gradient>, <wave:#a:#b>text</wave> (moving band), <rainbow>text</rainbow>; any number of colours per tag (#a:#b:#c...). Run /fa name help for examples.")
     @ConfigEditorText
     var myName = ""
 

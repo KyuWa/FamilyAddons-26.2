@@ -334,6 +334,7 @@ object NameSync {
             "§7Still gradient: §f<gradient:#ff0000:#0000ff>text</gradient>",
             "§7Moving band (KyoWaa style): §f<wave:#4B147D:#C86EFF>text</wave>",
             "§7Moving rainbow: §f<rainbow>text</rainbow>",
+            "§7More than two colours: §f<wave:#55FFFF:#5555FF:#AA00AA>text</wave> §7(gradient and rainbow too)",
             "§7Mix them: §f&l<wave:#00ffff:#ff00ff>Kyo</wave>&r&7Waa",
             "§7Set it under §f/fa §7> Name Changer, hit §fPreview§7, then §fSubmit§7.",
         )
