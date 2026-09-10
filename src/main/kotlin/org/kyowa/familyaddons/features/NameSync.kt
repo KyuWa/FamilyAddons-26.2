@@ -329,6 +329,7 @@ object NameSync {
         val mc = Minecraft.getInstance()
         val lines = listOf(
             "§d§lName Changer syntax §7(max 24 visible characters)",
+            "§7No codes needed: /fa > Name Changer > Easy Builder (colour wheels + style), then Build and Submit.",
             "§7Colours: §f&a &b &c... §7formats: §f&l §7bold §f&n §7underline §f&o §7italic §f&r §7reset",
             "§7Hex colour: §f<#ff8800>text",
             "§7Still gradient: §f<gradient:#ff0000:#0000ff>text</gradient>",
