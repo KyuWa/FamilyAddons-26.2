@@ -105,6 +105,35 @@ async function approvedMap(env) {
   return out;
 }
 
+/**
+ * IGN -> {uuid, username}. Mojang's profile API often refuses requests coming
+ * from Cloudflare's IP space, so PlayerDB is tried when Mojang does not answer 200.
+ */
+async function resolveIgn(ign) {
+  const headers = { "User-Agent": "FamilyAddons-names-worker (github.com/KyuWa)" };
+  const tried = [];
+  try {
+    const r = await fetch("https://api.mojang.com/users/profiles/minecraft/" + encodeURIComponent(ign), { headers });
+    if (r.status === 200) {
+      const m = await r.json();
+      if (UUID_RE.test(m.id || "")) return { ok: true, uuid: normUuid(m.id), username: m.name };
+    }
+    if (r.status === 404) return { ok: false, error: "no Minecraft account called " + ign };
+    tried.push("mojang " + r.status);
+  } catch (e) { tried.push("mojang " + e.message); }
+  try {
+    const r = await fetch("https://playerdb.co/api/player/minecraft/" + encodeURIComponent(ign), { headers });
+    if (r.status === 200) {
+      const m = await r.json();
+      const p = m && m.data && m.data.player;
+      if (p && UUID_RE.test(p.id || "")) return { ok: true, uuid: normUuid(p.id), username: p.username };
+      if (m && m.code === "minecraft.invalid_username") return { ok: false, error: "no Minecraft account called " + ign };
+    }
+    tried.push("playerdb " + r.status);
+  } catch (e) { tried.push("playerdb " + e.message); }
+  return { ok: false, error: "could not look up " + ign + " (" + tried.join(", ") + ")" };
+}
+
 async function applyReview(env, uuid, approve) {
   const pending = await env.NAMES.get("p:" + uuid, "json");
   if (!pending) return { ok: false, error: "nothing pending for that uuid" };
@@ -317,15 +346,10 @@ export default {
       if (!body || !NAME_RE.test(body.username || "")) return json({ error: "bad username" }, 400);
       const why = validName(body.name);
       if (why) return json({ ok: false, error: why });
-      // The owner types an IGN, not a uuid: resolve it through Mojang.
-      let uuid, username;
-      try {
-        const r = await fetch("https://api.mojang.com/users/profiles/minecraft/" + encodeURIComponent(body.username));
-        if (r.status !== 200) return json({ ok: false, error: "no Minecraft account called " + body.username });
-        const m = await r.json();
-        if (!UUID_RE.test(m.id || "")) return json({ ok: false, error: "Mojang returned no uuid" });
-        uuid = normUuid(m.id); username = m.name;
-      } catch (e) { return json({ ok: false, error: "Mojang lookup failed: " + e.message }); }
+      // The owner types an IGN, not a uuid: resolve it.
+      const found = await resolveIgn(body.username);
+      if (!found.ok) return json({ ok: false, error: found.error });
+      const uuid = found.uuid, username = found.username;
       const now = Date.now();
       await env.NAMES.put("a:" + uuid, JSON.stringify({ uuid, username, name: body.name, at: now, approvedAt: now }));
       await env.NAMES.delete("p:" + uuid);
