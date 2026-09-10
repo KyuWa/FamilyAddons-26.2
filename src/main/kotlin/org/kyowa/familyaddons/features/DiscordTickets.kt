@@ -148,7 +148,7 @@ object DiscordTickets {
                 .append(Component.literal(" "))
         }
         body.append(button("[Invite]", "§e", ClickEvent.RunCommand("/p invite ${t.ign}"), "Party invite ${t.ign}"))
-        if (t.serverId.isNotEmpty() && t.messageId.isNotEmpty()) {
+        if (t.serverId.isNotEmpty() && t.channelId.isNotEmpty()) {
             body.append(Component.literal(" "))
                 .append(button("[View Ticket]", "§6", ClickEvent.RunCommand("/fa ticketopen ${t.channelId}"), "Jump to the ticket in the Discord app"))
         }
