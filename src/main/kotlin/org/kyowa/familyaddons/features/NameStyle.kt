@@ -189,7 +189,9 @@ object NameStyle {
         // open animated/gradient run: (null type = static gradient), colour stops
         var run: Pair<AnimType?, IntArray>? = null
         val runText = StringBuilder()
-        var runStyleSnapshot: Style? = null
+        // Style per character of runText: a format code inside a run (<wave>&lName</wave>)
+        // applies from that character on instead of being lost.
+        val runStyles = ArrayList<Style>()
 
         fun style(): Style {
             var s = base.withBold(bold).withItalic(italic).withUnderlined(underline).withStrikethrough(strike).withObfuscated(obf)
@@ -200,27 +202,27 @@ object NameStyle {
             val r = run ?: return
             val text = runText.toString()
             val n = text.length
-            val st = runStyleSnapshot ?: style()
             if (n > 0) {
                 if (r.first == null) {
                     for ((i, ch) in text.withIndex()) {
                         val k = if (n == 1) 0.0 else i.toDouble() / (n - 1)
-                        out.append(Component.literal(ch.toString()).withStyle(st.withColor(lerpN(r.second, k))))
+                        out.append(Component.literal(ch.toString()).withStyle(runStyles[i].withColor(lerpN(r.second, k))))
                     }
                 } else {
                     val slot = slotFor(r.first!!, r.second, n)
                     for ((i, ch) in text.withIndex()) {
                         val col = if (slot < 0) lerpN(r.second, i.toDouble() / maxOf(1, n - 1))
                                   else (MARKER_RED shl 16) or ((i and 0xFF) shl 8) or (slot and 0xFF)
-                        out.append(Component.literal(ch.toString()).withStyle(st.withColor(col)))
+                        out.append(Component.literal(ch.toString()).withStyle(runStyles[i].withColor(col)))
                     }
                 }
             }
-            run = null; runText.setLength(0); runStyleSnapshot = null
+            run = null; runText.setLength(0); runStyles.clear()
         }
         fun emit(text: String) {
             if (text.isEmpty()) return
-            if (run != null) runText.append(text) else out.append(Component.literal(text).withStyle(style()))
+            if (run != null) { runText.append(text); repeat(text.length) { runStyles.add(style()) } }
+            else out.append(Component.literal(text).withStyle(style()))
         }
 
         var last = 0
@@ -247,7 +249,6 @@ object NameStyle {
                         "wave" -> Pair(AnimType.WAVE, stops)
                         else -> Pair(AnimType.RAINBOW, stops)
                     }
-                    runStyleSnapshot = style()
                 }
                 g[4].isNotEmpty() -> { flushRun(); color = g[4].toInt(16) }
                 g[5].isNotEmpty() -> {
