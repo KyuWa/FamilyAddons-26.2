@@ -48,7 +48,7 @@ class HighlightConfig {
     var shulkerColor = "0:255:200:100:255"
 
     @Expose @JvmField
-    @ConfigOption(name = "Highlight Sparkling Critters", desc = "Highlight sparkling critters even before their nametag shows — detected by name, enchant glint, or the sparkle particles they emit.")
+    @ConfigOption(name = "Highlight Sparkling Critters", desc = "Highlight sparkling critters even before their nametag shows — detected by name, enchant glint, or the sparkle particles they emit. Only active while you are in the Critter Safari.")
     @ConfigEditorBoolean
     var sparklingHighlightEnabled = false
 

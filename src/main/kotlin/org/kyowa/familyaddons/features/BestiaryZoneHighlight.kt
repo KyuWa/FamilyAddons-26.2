@@ -136,6 +136,13 @@ object BestiaryZoneHighlight {
         "pangolin"   to EntityRule("armadillo"),
     )
 
+    /**
+     * Scoped keys marked maxed by an in-game source this session (bestiary page
+     * "(MAX!)", tab list MAX). The Hypixel API lags a few minutes behind real
+     * kills, so it must not be allowed to un-max these while it catches up.
+     */
+    private val inGameMaxed: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+
     /** Entity rules for every mob in the selected zone, keyed by display name. */
     @Volatile private var zoneEntityRules: Map<String, EntityRule> = emptyMap()
 
@@ -494,7 +501,7 @@ object BestiaryZoneHighlight {
                                 }
                                 val persisted = persistedMaxedFor(neuKey)
                                 val newApiMaxed = apiMaxed - persisted
-                                val staleMaxed = provablyNotMaxed.filter { it in persisted }
+                                val staleMaxed = provablyNotMaxed.filter { it in persisted && scoped(neuKey, it) !in inGameMaxed }
                                 if (newApiMaxed.isNotEmpty() || staleMaxed.isNotEmpty()) {
                                     newApiMaxed.forEach { cfg.maxedMobs.add(scoped(neuKey, it)) }
                                     staleMaxed.forEach { cfg.maxedMobs.remove(scoped(neuKey, it)) }
@@ -534,7 +541,7 @@ object BestiaryZoneHighlight {
         val persisted = persistedMaxedFor(zoneKey)
         val newMaxed = (maxed - persisted).filter { it in allZoneMobNames }
         if (newMaxed.isNotEmpty()) {
-            newMaxed.forEach { cfg.maxedMobs.add(scoped(zoneKey, it)) }
+            newMaxed.forEach { cfg.maxedMobs.add(scoped(zoneKey, it)); inGameMaxed.add(scoped(zoneKey, it)) }
             FamilyConfigManager.save()
             FamilyAddons.LOGGER.info("BestiaryZoneHighlight: persisted new maxed mobs: $newMaxed")
         }
@@ -872,8 +879,10 @@ object BestiaryZoneHighlight {
             }
 
             if (isMax) {
+                inGameMaxed.add(name)
                 if (cfg.maxedMobs.add(name)) changed = true
             } else if (cfg.maxedMobs.remove(name)) {
+                inGameMaxed.remove(name)
                 FamilyAddons.LOGGER.info("BestiaryZoneHighlight: '$name' is not maxed per bestiary page — removed from maxed set")
                 changed = true
             }

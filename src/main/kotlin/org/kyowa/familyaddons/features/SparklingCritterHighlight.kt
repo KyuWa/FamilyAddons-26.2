@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import org.kyowa.familyaddons.COLOR_CODE_REGEX
 import org.kyowa.familyaddons.config.FamilyConfigManager
+import org.kyowa.familyaddons.util.HypixelLocation
 
 /**
  * Highlights sparkling critters even when their nametag is hidden (critter
@@ -52,7 +53,9 @@ object SparklingCritterHighlight {
     private var tick = 0
 
     private fun cfg() = FamilyConfigManager.config.highlight
-    private fun active() = cfg().enabled && cfg().sparklingHighlightEnabled
+    /** Only in the Critter Safari (Mod API area "Safari"; tab list "Critter Safari"). */
+    private fun inSafari() = HypixelLocation.areaName()?.contains("safari", ignoreCase = true) == true
+    private fun active() = cfg().enabled && cfg().sparklingHighlightEnabled && inSafari()
 
     fun trackedEntities(): List<Entity> = if (active()) sparkling else emptyList()
 
