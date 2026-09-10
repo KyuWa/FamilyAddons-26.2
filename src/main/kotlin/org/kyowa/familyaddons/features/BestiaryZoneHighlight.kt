@@ -132,6 +132,8 @@ object BestiaryZoneHighlight {
         // (0.4 wide) under an item display + 1.1 interaction box at the same spot.
         // EntityHighlight draws a full block box for it since the mob never renders.
         "duplico"    to EntityRule("silverfish"),
+        // Entity dump 2026-09-10 (Torrhus Canyon): Pangolin is a plain armadillo (0.7 wide).
+        "pangolin"   to EntityRule("armadillo"),
     )
 
     /** Entity rules for every mob in the selected zone, keyed by display name. */
