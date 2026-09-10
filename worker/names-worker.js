@@ -156,10 +156,8 @@ function requestEmbed(rec) {
   };
 }
 
-/** Bot mode: post with real buttons. Returns true when it posted. */
-async function notifyDiscordBot(env, rec) {
-  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_CHANNEL_ID) return false;
-  const body = {
+function requestMessage(rec) {
+  return {
     embeds: [requestEmbed(rec)],
     components: [{
       type: 1,
@@ -169,11 +167,31 @@ async function notifyDiscordBot(env, rec) {
       ],
     }],
   };
+}
+
+/** Bot mode: post with real buttons. Returns the message id, or null when it could not post. */
+async function notifyDiscordBot(env, rec) {
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_CHANNEL_ID) return null;
   try {
     const r = await fetch(`https://discord.com/api/v10/channels/${env.DISCORD_CHANNEL_ID}/messages`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bot ${env.DISCORD_BOT_TOKEN}` },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestMessage(rec)),
+    });
+    if (!r.ok) return null;
+    const m = await r.json();
+    return m && m.id ? String(m.id) : null;
+  } catch (e) { return null; }
+}
+
+/** Bot mode: a resubmitted request edits its existing Discord message in place. Returns true on success. */
+async function editDiscordBot(env, rec, msgId) {
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_CHANNEL_ID || !msgId) return false;
+  try {
+    const r = await fetch(`https://discord.com/api/v10/channels/${env.DISCORD_CHANNEL_ID}/messages/${msgId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", authorization: `Bot ${env.DISCORD_BOT_TOKEN}` },
+      body: JSON.stringify(requestMessage(rec)),
     });
     return r.ok;
   } catch (e) { return false; }
@@ -201,9 +219,12 @@ async function notifyDiscordWebhook(env, rec, baseUrl) {
   } catch (e) { /* the in-game /fa names path still works */ }
 }
 
+/** Post the request to Discord; returns the bot message id when bot mode posted it. */
 async function notifyDiscord(env, rec, baseUrl) {
-  if (await notifyDiscordBot(env, rec)) return;
+  const id = await notifyDiscordBot(env, rec);
+  if (id) return id;
   await notifyDiscordWebhook(env, rec, baseUrl);
+  return null;
 }
 
 /** Discord interaction endpoint: verifies the Ed25519 signature, answers PINGs, handles button clicks. */
@@ -277,10 +298,22 @@ export default {
         await env.NAMES.delete("p:" + uuid);
         return json({ ok: true, status: "approved" });
       }
+      // A request still waiting for review is REPLACED by the new template (no rate
+      // limit): a fix-up right after submitting must not be thrown away. In bot mode
+      // the Discord message is edited in place so the reviewer sees the new one.
+      const pending = await env.NAMES.get("p:" + uuid, "json");
+      if (pending) {
+        if (pending.name === rec.name) return json({ ok: true, status: "pending", replaced: false });
+        const edited = await editDiscordBot(env, rec, pending.msgId);
+        const msgId = edited ? pending.msgId : await notifyDiscord(env, rec, baseUrl);
+        await env.NAMES.put("p:" + uuid, JSON.stringify({ ...rec, msgId }));
+        return json({ ok: true, status: "pending", replaced: true });
+      }
       if (await env.NAMES.get("rl:" + uuid)) return json({ error: "you can submit once every 10 minutes" }, 429);
       await env.NAMES.put("rl:" + uuid, "1", { expirationTtl: RL_TTL_S });
       await env.NAMES.put("p:" + uuid, JSON.stringify(rec));
-      await notifyDiscord(env, rec, baseUrl);
+      const msgId = await notifyDiscord(env, rec, baseUrl);
+      if (msgId) await env.NAMES.put("p:" + uuid, JSON.stringify({ ...rec, msgId }));
       return json({ ok: true, status: "pending" });
     }
 

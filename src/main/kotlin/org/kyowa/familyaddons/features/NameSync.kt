@@ -105,6 +105,7 @@ object NameSync {
                 val j = runCatching { JsonParser.parseString(resp.body()).asJsonObject }.getOrNull()
                 when {
                     resp.statusCode() == 200 && j?.get("status")?.asString == "approved" -> { FaChat.send("§aYour name is live for everyone."); fetchAll() }
+                    resp.statusCode() == 200 && j?.get("replaced")?.asBoolean == true -> { awaiting = true; statusTicker = 0; FaChat.send("§aUpdated your pending request with the new name. It shows for everyone once KyoWaa approves it.") }
                     resp.statusCode() == 200 -> { awaiting = true; statusTicker = 0; FaChat.send("§aSubmitted. It shows for everyone once KyoWaa approves it. You'll get a message here either way.") }
                     else -> FaChat.send("§cNot accepted: §7${j?.get("error")?.asString ?: "HTTP ${resp.statusCode()}"}")
                 }
