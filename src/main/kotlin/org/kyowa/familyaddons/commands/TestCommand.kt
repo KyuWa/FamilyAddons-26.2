@@ -148,7 +148,7 @@ object TestCommand {
                             }))
 
                     // /fa helix next|prev|reset|list — Helix tree route on Torrhus Canyon
-                    .then(literal("helix").requires { DevAccess.isDev() }
+                    .then(literal("helix")
                         .executes { org.kyowa.familyaddons.features.HelixWaypoints.command("list"); 1 }
                         .then(argument("action", StringArgumentType.word())
                             .executes { ctx ->

@@ -11,14 +11,13 @@ import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.world.phys.Vec3
 import org.kyowa.familyaddons.FamilyAddons
 import org.kyowa.familyaddons.config.FamilyConfigManager
-import org.kyowa.familyaddons.util.DevAccess
 
 /**
- * Owner-only: the Big Helix tree route on Torrhus Canyon (imported from a
- * Skyblocker waypoint export, bundled as helix_waypoints.json). Box outlines
- * through walls in the export's colours (green = tree, cyan = etherwarp spot,
- * white = Evasive shop) with a distance label. Shown only for the dev UUID,
- * only on Torrhus Canyon, behind the "Helix Tree Waypoints" toggle in Dev.
+ * The Big Helix tree route on Torrhus Canyon (imported from a Skyblocker
+ * waypoint export, bundled as helix_waypoints.json). Box outlines through
+ * walls in the export's colours (green = tree, cyan = etherwarp spot, white =
+ * Evasive shop) with a distance label. Only on Torrhus Canyon, behind the
+ * "Helix Tree Waypoints" toggle in the Foraging category.
  *
  * Route mode: the points are visited in file order (the shop is skipped);
  * only the current stop is drawn. A tracer runs from you to it; getting within [REACH] blocks
@@ -53,7 +52,7 @@ object HelixWaypoints {
         emptyList()
     }
 
-    private fun enabled() = DevAccess.isDev() && FamilyConfigManager.config.dev.helixWaypoints
+    private fun enabled() = FamilyConfigManager.config.foraging.helixWaypoints
 
     fun register() {
         // World change (warp, island hop, relog): start the route over from stop 1.
@@ -65,7 +64,7 @@ object HelixWaypoints {
                 ticker = 0
                 onIsland = enabled() && Waypoints.getCurrentIsland() == ISLAND
             }
-            if (!onIsland || !FamilyConfigManager.config.dev.helixTracer) return@register
+            if (!onIsland || !FamilyConfigManager.config.foraging.helixTracer) return@register
             val player = client.player ?: return@register
             val t = target() ?: return@register
             val dx = player.x - (t.x + 0.5); val dy = player.y - t.y; val dz = player.z - (t.z + 0.5)
@@ -116,7 +115,7 @@ object HelixWaypoints {
         val centre = Vec3(p.x + 0.5, p.y + 0.5, p.z + 0.5)
         val dist = centre.distanceTo(cam)
 
-        if (FamilyConfigManager.config.dev.helixTracer) {
+        if (FamilyConfigManager.config.foraging.helixTracer) {
             // Same anchor as the bestiary tracer: half a block in front of the
             // camera along its own yaw/pitch, so the line starts at the crosshair
             // and does not jitter with the player's tick position.
@@ -141,7 +140,7 @@ object HelixWaypoints {
 
     /** Dev "Helix Tracer Color" ("chroma:alpha:r:g:b") → r, g, b, a in 0..1. */
     private fun tracerColor(): FloatArray = try {
-        val q = FamilyConfigManager.config.dev.helixTracerColor.split(":")
+        val q = FamilyConfigManager.config.foraging.helixTracerColor.split(":")
         floatArrayOf(q[2].toInt() / 255f, q[3].toInt() / 255f, q[4].toInt() / 255f, q[1].toInt() / 255f)
     } catch (e: Exception) { floatArrayOf(1f, 0.67f, 0f, 0.9f) }
 

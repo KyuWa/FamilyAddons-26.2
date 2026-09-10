@@ -74,6 +74,10 @@ class FamilyConfig : Config() {
     var nameChanger = NameChangerConfig()
 
     @Expose @JvmField
+    @Category(name = "Foraging", desc = "Foraging features — Big Helix tree route on Torrhus Canyon")
+    var foraging = ForagingConfig()
+
+    @Expose @JvmField
     @Category(name = "Dev", desc = "Developer debug tools")
     var dev = DevConfig()
 }

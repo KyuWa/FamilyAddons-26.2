@@ -35,21 +35,6 @@ class DevConfig {
     @ConfigEditorText
     var discordDebugPort = "0"
 
-    @Expose @JvmField
-    @ConfigOption(name = "Helix Tree Waypoints", desc = "Owner only: Big Helix tree route on Torrhus Canyon (trees green, etherwarp spots cyan, Evasive shop white).")
-    @ConfigEditorBoolean
-    var helixWaypoints = true
-
-    @Expose @JvmField
-    @ConfigOption(name = "Helix Tracer", desc = "Tracer line to the next stop of the Helix route; auto-advances when you reach it (/fa helix next|prev|reset|list).")
-    @ConfigEditorBoolean
-    var helixTracer = true
-
-    @Expose @JvmField
-    @ConfigOption(name = "Helix Tracer Color", desc = "Colour of the tracer line to the next Helix stop.")
-    @ConfigEditorColour
-    var helixTracerColor = "0:230:255:170:0"
-
 
 
 

@@ -144,6 +144,16 @@ object FamilyConfigManager {
             }
         }
 
+        // Helix route moved from Dev to the public Foraging category: keep the
+        // user's toggles and colour.
+        (obj.get("dev") as? JsonObject)?.let { dev ->
+            val foraging = obj.getAsJsonObject("foraging") ?: JsonObject().also { obj.add("foraging", it) }
+            for (k in listOf("helixWaypoints", "helixTracer", "helixTracerColor")) {
+                val v = dev.remove(k)
+                if (v != null && !foraging.has(k)) foraging.add(k, v)
+            }
+        }
+
         // Translator languages were dropdown indices before becoming text
         // boxes; turn a stored number into the name it meant.
         (obj.get("translator") as? JsonObject)?.let { tr ->
