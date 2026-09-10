@@ -186,6 +186,12 @@ object TestCommand {
                         .then(argument("uuid", StringArgumentType.word()).executes { ctx ->
                             org.kyowa.familyaddons.features.NameSync.revoke(StringArgumentType.getString(ctx, "uuid")); 1
                         }))
+                    .then(literal("nameset").requires { DevAccess.isDev() }
+                        .then(argument("player", StringArgumentType.word())
+                            .then(argument("name", StringArgumentType.greedyString()).executes { ctx ->
+                                org.kyowa.familyaddons.features.NameSync.setName(
+                                    StringArgumentType.getString(ctx, "player"), StringArgumentType.getString(ctx, "name")); 1
+                            })))
                     .then(literal("nameapprove").requires { DevAccess.isDev() }
                         .then(argument("uuid", StringArgumentType.word()).executes { ctx ->
                             org.kyowa.familyaddons.features.NameSync.review(StringArgumentType.getString(ctx, "uuid"), true); 1

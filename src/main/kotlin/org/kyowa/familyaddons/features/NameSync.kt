@@ -151,6 +151,20 @@ object NameSync {
                 val j = JsonParser.parseString(resp.body()).asJsonObject
                 when (j.get("status")?.asString) {
                     "pending" -> awaiting = true
+                    "set" -> {
+                        awaiting = false
+                        val at = j.get("at")?.asLong ?: 0L
+                        if (at > loadSeen()) {
+                            saveSeen(at)
+                            val name = j.get("name")?.asString ?: ""
+                            val mc = Minecraft.getInstance()
+                            mc.execute {
+                                mc.player?.sendSystemMessage(FaChat.prefixed(Component.literal("§dKyoWaa gave you a custom name! Everyone now sees you as ")
+                                    .append(NameStyle.render(name, Style.EMPTY))))
+                            }
+                            fetchAll()
+                        }
+                    }
                     "revoked" -> {
                         awaiting = false
                         val at = j.get("at")?.asLong ?: 0L
@@ -253,6 +267,27 @@ object NameSync {
                     p.sendSystemMessage(line)
                 }
             }
+        }
+    }
+
+    /** `/fa nameset <player> <name>` — give someone a name directly, no approval step. */
+    fun setName(player: String, name: String) {
+        if (!DevAccess.isDev()) return
+        CompletableFuture.runAsync {
+            try {
+                val body = JsonObject().apply { addProperty("username", player); addProperty("name", name) }.toString()
+                val req = admin(HttpRequest.newBuilder(URI.create("$WORKER_URL/set"))).POST(HttpRequest.BodyPublishers.ofString(body)).build()
+                val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
+                val j = runCatching { JsonParser.parseString(resp.body()).asJsonObject }.getOrNull()
+                if (resp.statusCode() == 200 && j?.get("ok")?.asBoolean == true) {
+                    val mc = Minecraft.getInstance()
+                    mc.execute {
+                        mc.player?.sendSystemMessage(FaChat.prefixed(Component.literal("§aSet §f${j.get("username").asString}§a's name to ")
+                            .append(NameStyle.render(j.get("name").asString, Style.EMPTY))))
+                    }
+                    fetchAll()
+                } else FaChat.send("§cSet failed: §7${j?.get("error")?.asString ?: "HTTP ${resp.statusCode()}"}")
+            } catch (e: Exception) { FaChat.send("§cSet failed: §7${e.message}") }
         }
     }
 

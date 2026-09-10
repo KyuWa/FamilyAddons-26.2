@@ -4,13 +4,14 @@
 //   PUT    /name    {"uuid","username","name"}  -> pending review (owner's own: approved at once)
 //   DELETE /name    {"uuid"}                    -> remove own approved + pending
 //   GET    /names                               -> {"username_lower": "template", ...} (approved only)
-//   GET    /status?uuid=                        -> {"status":"pending"|"approved"|"denied"|"revoked"|"none", name, at}
+//   GET    /status?uuid=                        -> {"status":"pending"|"approved"|"denied"|"revoked"|"set"|"none", name, at}
 //
 // Owner endpoints (header X-Admin-Key: <ADMIN_KEY>):
 //   GET    /pending                             -> [{uuid, username, name, at}]
 //   POST   /review  {"uuid","approve":true|false}
 //   GET    /approved                            -> [{uuid, username, name, approvedAt}]
 //   POST   /revoke  {"uuid"}                    -> take an approved name down (player is told in game)
+//   POST   /set     {"username","name"}         -> give a player a name directly, no approval step (IGN resolved via Mojang)
 //   GET    /review?uuid=&action=approve|deny&sig=   (signed links, webhook mode)
 //   POST   /discord                             (Discord interaction endpoint, bot mode)
 //
@@ -276,7 +277,7 @@ export default {
       const pending = await env.NAMES.get("p:" + uuid, "json");
       if (pending) return json({ status: "pending", name: pending.name, at: pending.at });
       const d = await env.NAMES.get("d:" + uuid, "json");
-      if (d) return json({ status: d.revoked ? "revoked" : d.approved ? "approved" : "denied", name: d.name, at: d.at });
+      if (d) return json({ status: d.revoked ? "revoked" : d.set ? "set" : d.approved ? "approved" : "denied", name: d.name, at: d.at });
       return json({ status: "none" });
     }
 
@@ -307,6 +308,29 @@ export default {
       }
       out.sort((a, b) => String(a.username).localeCompare(String(b.username)));
       return json(out);
+    }
+
+    if (url.pathname === "/set" && request.method === "POST") {
+      if (!adminAuth) return json({ error: "unauthorized" }, 401);
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      if (!body || !NAME_RE.test(body.username || "")) return json({ error: "bad username" }, 400);
+      const why = validName(body.name);
+      if (why) return json({ ok: false, error: why });
+      // The owner types an IGN, not a uuid: resolve it through Mojang.
+      let uuid, username;
+      try {
+        const r = await fetch("https://api.mojang.com/users/profiles/minecraft/" + encodeURIComponent(body.username));
+        if (r.status !== 200) return json({ ok: false, error: "no Minecraft account called " + body.username });
+        const m = await r.json();
+        if (!UUID_RE.test(m.id || "")) return json({ ok: false, error: "Mojang returned no uuid" });
+        uuid = normUuid(m.id); username = m.name;
+      } catch (e) { return json({ ok: false, error: "Mojang lookup failed: " + e.message }); }
+      const now = Date.now();
+      await env.NAMES.put("a:" + uuid, JSON.stringify({ uuid, username, name: body.name, at: now, approvedAt: now }));
+      await env.NAMES.delete("p:" + uuid);
+      await env.NAMES.put("d:" + uuid, JSON.stringify({ approved: true, set: true, username, name: body.name, at: now }), { expirationTtl: DECISION_TTL_S });
+      return json({ ok: true, uuid, username, name: body.name });
     }
 
     if (url.pathname === "/revoke" && request.method === "POST") {
