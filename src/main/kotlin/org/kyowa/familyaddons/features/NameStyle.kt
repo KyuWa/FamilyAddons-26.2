@@ -54,7 +54,10 @@ object NameStyle {
         if (nick.isNotEmpty() && !me.isNullOrEmpty()) map[me.lowercase()] = nick
         effective = map
         regex = if (map.isEmpty()) null else
-            Regex("(?<![A-Za-z0-9_])(" + map.keys.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) } + ")(?![A-Za-z0-9_])", RegexOption.IGNORE_CASE)
+            // Word boundary on both sides, except that a legacy colour code counts as a
+            // boundary: Hypixel writes "§bzMusu §eis in..." (friend list, guild list)
+            // with no space between the code letter and the name.
+            Regex("(?<!(?<!§)[A-Za-z0-9_])(" + map.keys.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) } + ")(?![A-Za-z0-9_])", RegexOption.IGNORE_CASE)
         synchronized(rendered) { rendered.clear() }
     }
 
