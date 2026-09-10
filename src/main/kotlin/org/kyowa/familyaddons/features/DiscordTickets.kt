@@ -171,9 +171,10 @@ object DiscordTickets {
         }
 
     /**
-     * Claiming: Kuudra Gang tickets carry a Claim button (custom_id
-     * "ticket:claim:<tier>") that the bot clicks; Skyblock Maniacs uses the
-     * ticket bot's /claim slash command. SkyBlockZ is unverified, so no button.
+     * Claiming: the bot clicks the ticket message's Claim button (custom_id
+     * "ticket:claim:<tier>" / label "Claim") and nothing else, never a slash
+     * command. Kuudra Gang and Skyblock Maniacs tickets carry that button;
+     * SkyBlockZ is unverified, so no button.
      */
     private fun canClaim(t: Ticket) =
         t.server.equals("Skyblock Maniacs", ignoreCase = true) || t.server.equals("Kuudra Gang", ignoreCase = true)
