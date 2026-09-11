@@ -3,6 +3,8 @@ package org.kyowa.familyaddons.features
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+import org.kyowa.familyaddons.COLOR_CODE_REGEX
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
@@ -55,12 +57,25 @@ object DiscordTickets {
     @Volatile private var lastError: String? = null
     private var retryAtMs = 0L
     private val recent = ArrayDeque<Ticket>()
+    /** SkyBlockZ tickets the bot saw us claim (channel id -> ticket), newest last. */
+    private val claimed = LinkedHashMap<String, Ticket>()
+    /** Kuudra completions since the claim (or since the last log), per ticket channel. */
+    private val runsDone = HashMap<String, Int>()
     private var ticketCount = 0
     private var lastTicketMs = 0L
 
     private fun enabled() = DevAccess.isDev() && FamilyConfigManager.config.dev.discordTickets
 
     fun register() {
+        // "KUUDRA DOWN!" -> offer to log the run against the claimed SkyBlockZ ticket.
+        ClientReceiveMessageEvents.ALLOW_GAME.register { message, _ ->
+            if (claimed.isNotEmpty()) {
+                val raw = message.string
+                val plain = raw.replace(COLOR_CODE_REGEX, "").trim()
+                if (plain == "KUUDRA DOWN!" && !raw.contains(" >") && !raw.contains(":")) onKuudraDown()
+            }
+            true
+        }
         ClientTickEvents.END_CLIENT_TICK.register {
             val want = enabled()
             val running = thread?.isAlive == true
@@ -125,6 +140,8 @@ object DiscordTickets {
         when (val action = str("action")) {
             "ticket" -> mc.execute { onTicket(ticket) }
             "ticket_closed" -> mc.execute { onClosed(ticket) }
+            "ticket_claimed" -> mc.execute { onClaimed(ticket) }
+            "ticket_confirm" -> mc.execute { onConfirm(ticket) }
             else -> lastError = "unknown action $action"
         }
     }
@@ -158,8 +175,131 @@ object DiscordTickets {
         if (cfg.discordTicketTitle) DtTitle.show("§dTicket §e${t.tier} §fx${t.runs} §b${t.ign}")
     }
 
+    /** The ticket bot confirmed our claim ("Your ticket has been claimed by @KyoWaa"). SkyBlockZ only for now. */
+    private fun onClaimed(t: Ticket) {
+        if (!t.server.equals("SkyBlockZ", ignoreCase = true)) return
+        val full = recent.firstOrNull { it.channelId == t.channelId }?.let {
+            Ticket(it.server, t.ign.ifEmpty { it.ign }, t.tier.ifEmpty { it.tier }, it.runs, it.channelId, it.serverId, it.messageId)
+        } ?: t
+        claimed.remove(full.channelId)
+        claimed[full.channelId] = full
+        runsDone[full.channelId] = 0
+        Minecraft.getInstance().player?.sendSystemMessage(
+            FaChat.prefixed("§aClaimed §b${full.ign} §8| ${tierColor(full.tier)}${full.tier} §fx${full.runs} §8| §7after each §fKUUDRA DOWN! §7you get a prompt to log it (§e${logType(full.tier)}§7)")
+        )
+    }
+
+    /** Ticket tier -> the /logrep "type" choice: Basic = T1 ... Infernal = T5. */
+    private fun logType(tier: String): String {
+        val t = tier.trim()
+        val n = when (t.lowercase()) {
+            "basic" -> 1; "hot" -> 2; "burning" -> 3; "fiery" -> 4; "infernal" -> 5
+            else -> t.uppercase().removePrefix("T").toIntOrNull() ?: 0
+        }
+        return if (n in 1..5) "T$n Kuudra" else "$t Kuudra"
+    }
+
+    private fun onKuudraDown() {
+        val t = claimed.values.lastOrNull() ?: return
+        val n = (runsDone[t.channelId] ?: 0) + 1
+        runsDone[t.channelId] = n
+        val line = Component.literal("§aKuudra down! §7Log rep for §b${t.ign} §8| §e${logType(t.tier)} §8| §7done since last log: §f$n  ")
+            .append(button("[Log 1 run]", "§a", ClickEvent.RunCommand("/fa logrep ${t.channelId} 1"), "Send /logrep type: ${logType(t.tier)} amt: 1 in ${t.ign}'s ticket"))
+        if (n > 1) line.append(Component.literal(" ")).append(button("[Log all $n]", "§e", ClickEvent.RunCommand("/fa logrep ${t.channelId} $n"), "Send /logrep type: ${logType(t.tier)} amt: $n in ${t.ign}'s ticket"))
+        if (claimed.size > 1) line.append(Component.literal(" §8(${claimed.size} claimed tickets, newest shown)"))
+        Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed(line))
+    }
+
+    /**
+     * `/fa logrep <channelId> <amt>`: clicked from the Kuudra-down prompt. Tells the
+     * bot to run the ticket bot's /logrep slash command in that ticket channel and
+     * waits for its answer. Never automatic: only ever from that click.
+     */
+    fun logRep(channelId: String, amt: Int) {
+        if (!enabled()) return
+        val t = claimed[channelId] ?: recent.firstOrNull { it.channelId == channelId }
+        if (t == null) { FaChat.send("§cThat ticket is no longer in memory."); return }
+        val type = logType(t.tier)
+        Thread({
+            try {
+                val reply = Socket().use { s ->
+                    s.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), CLAIM_PORT), 2000)
+                    s.soTimeout = 15000
+                    val w = OutputStreamWriter(s.getOutputStream(), Charsets.UTF_8)
+                    w.write(JsonObject().apply {
+                        addProperty("action", "logrep"); addProperty("channel_id", channelId)
+                        addProperty("type", type); addProperty("amt", amt)
+                    }.toString() + "\n")
+                    w.flush()
+                    BufferedReader(InputStreamReader(s.getInputStream(), Charsets.UTF_8)).readLine()
+                }
+                val j = runCatching { JsonParser.parseString(reply ?: "").asJsonObject }.getOrNull()
+                if (j?.get("ok")?.asBoolean == true) {
+                    Minecraft.getInstance().execute { runsDone[channelId] = maxOf(0, (runsDone[channelId] ?: 0) - amt) }
+                    FaChat.send("§aSent §f/logrep type: $type amt: $amt §7in §b${t.ign}§7's ticket")
+                } else {
+                    FaChat.send("§cLog rep failed: §7${j?.get("error")?.asString ?: "no answer from sbm_bot/bot.py"}")
+                }
+            } catch (e: Exception) {
+                FaChat.send("§cLog rep failed: §7${e.message} §8(is bot.py running?)")
+            }
+        }, "FA-Tickets-LogRep").apply { isDaemon = true; start() }
+    }
+
+    /** Discord message id of the ticket bot's "is the ticket complete?" question, per channel. */
+    private val confirmMsg = HashMap<String, String>()
+
+    /** The ticket bot asked "Ticket Completion Confirmation" (Yes / No buttons) after a log. */
+    private fun onConfirm(t: Ticket) {
+        confirmMsg[t.channelId] = t.messageId
+        val known = claimed[t.channelId] ?: recent.firstOrNull { it.channelId == t.channelId }
+        val ign = t.ign.ifEmpty { known?.ign ?: "?" }
+        val line = Component.literal("§eTicket bot asks: is §b$ign§e's ticket complete?  ")
+            .append(button("[Yes]", "§a", ClickEvent.RunCommand("/fa ticketanswer ${t.channelId} yes"), "Click Yes on the ticket bot's question (closes the ticket)"))
+            .append(Component.literal(" "))
+            .append(button("[No]", "§c", ClickEvent.RunCommand("/fa ticketanswer ${t.channelId} no"), "Click No on the ticket bot's question"))
+        Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed(line))
+    }
+
+    /**
+     * `/fa ticketanswer <channelId> yes|no`: the bot clicks that button on the
+     * confirmation message. If the button cannot be found the ONLY fallback is
+     * jumping to the ticket in Discord (same as View Ticket) so you can click it.
+     */
+    fun answer(channelId: String, yes: Boolean) {
+        if (!enabled()) return
+        val label = if (yes) "Yes" else "No"
+        Thread({
+            val j = botCall(JsonObject().apply {
+                addProperty("action", "ticket_answer"); addProperty("channel_id", channelId)
+                addProperty("message_id", confirmMsg[channelId] ?: ""); addProperty("answer", label.lowercase())
+            })
+            if (j?.get("ok")?.asBoolean == true) {
+                FaChat.send("§aClicked §f$label §7on the ticket bot's question.")
+            } else {
+                FaChat.send("§cCould not click $label: §7${j?.get("error")?.asString ?: "no answer from bot.py"}§c. Opening the ticket so you can click it.")
+                open(channelId)
+            }
+        }, "FA-Tickets-Answer").apply { isDaemon = true; start() }
+    }
+
+    /** One JSON line to the bot's claim port, one JSON line back (null when nothing came back). */
+    private fun botCall(obj: JsonObject): JsonObject? = try {
+        val reply = Socket().use { s ->
+            s.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), CLAIM_PORT), 2000)
+            s.soTimeout = 15000
+            val w = OutputStreamWriter(s.getOutputStream(), Charsets.UTF_8)
+            w.write(obj.toString() + "\n"); w.flush()
+            BufferedReader(InputStreamReader(s.getInputStream(), Charsets.UTF_8)).readLine()
+        }
+        runCatching { JsonParser.parseString(reply ?: "").asJsonObject }.getOrNull()
+    } catch (e: Exception) {
+        JsonObject().apply { addProperty("ok", false); addProperty("error", "${e.message} (is bot.py running?)") }
+    }
+
     private fun onClosed(t: Ticket) {
         recent.removeAll { it.channelId == t.channelId }
+        claimed.remove(t.channelId); runsDone.remove(t.channelId); confirmMsg.remove(t.channelId)
         Minecraft.getInstance().player?.sendSystemMessage(
             FaChat.prefixed("§7Ticket closed §8| §7${t.server} §8| ${tierColor(t.tier)}${t.tier} §8| §7${t.ign}")
         )
@@ -568,5 +708,6 @@ object DiscordTickets {
         appendLine("§d[Tickets] §7enabled=${enabled()} listening=${serverSocket?.let { !it.isClosed } ?: false} port=$LISTEN_PORT claimPort=$CLAIM_PORT")
         appendLine("§7 tickets=$ticketCount lastAgo=${if (lastTicketMs == 0L) "-" else "${(System.currentTimeMillis() - lastTicketMs) / 1000}s"} lastError=${lastError ?: "-"}")
         recent.take(5).forEach { appendLine("§7  ${it.server} | ${it.tier} x${it.runs} | ${it.ign} | ${it.channelId}") }
+        claimed.values.forEach { appendLine("§7  claimed: ${it.ign} (${logType(it.tier)}) runs since log=${runsDone[it.channelId] ?: 0} | ${it.channelId}") }
     }
 }

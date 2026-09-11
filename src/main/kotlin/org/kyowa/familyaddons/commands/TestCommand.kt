@@ -147,6 +147,24 @@ object TestCommand {
                                 1
                             }))
 
+                    // /fa logrep <channel_id> <amt> — clicked from the Kuudra-down prompt: bot sends /logrep in the ticket
+                    .then(literal("logrep").requires { DevAccess.isDev() }
+                        .then(argument("channel", StringArgumentType.word())
+                            .then(argument("amt", IntegerArgumentType.integer(1, 99))
+                                .executes { ctx ->
+                                    DiscordTickets.logRep(StringArgumentType.getString(ctx, "channel"), IntegerArgumentType.getInteger(ctx, "amt"))
+                                    1
+                                })))
+
+                    // /fa ticketanswer <channel_id> yes|no — clicked from the "ticket complete?" prompt
+                    .then(literal("ticketanswer").requires { DevAccess.isDev() }
+                        .then(argument("channel", StringArgumentType.word())
+                            .then(argument("answer", StringArgumentType.word())
+                                .executes { ctx ->
+                                    DiscordTickets.answer(StringArgumentType.getString(ctx, "channel"), StringArgumentType.getString(ctx, "answer").equals("yes", ignoreCase = true))
+                                    1
+                                })))
+
                     // /fa helix next|prev|reset|list — Helix tree route on Torrhus Canyon
                     .then(literal("helix")
                         .executes { org.kyowa.familyaddons.features.HelixWaypoints.command("list"); 1 }
