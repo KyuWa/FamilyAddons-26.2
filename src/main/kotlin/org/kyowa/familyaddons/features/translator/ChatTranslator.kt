@@ -44,6 +44,8 @@ object ChatTranslator {
     private val DM_REGEX = Regex("""^(From|To)\s+(?:\[[^\]]+\]\s*)?([A-Za-z0-9_]{1,16}):\s(.+)$""")
     // "Party > [MVP+] Name: hi" / "Guild > Name [GM]: hi" / "Officer > ..." / "Co-op > ..."
     private val CHANNEL_REGEX = Regex("""^(Party|Guild|Officer|Co-op)\s*[>»]\s*(?:\[[^\]]+\]\s*)?([A-Za-z0-9_]{1,16})(?:\s*\[[^\]]+\])?:\s(.+)$""")
+    // "[NPC] Oen: ..." — Hypixel NPC dialogue (SkyBlock quests, lobby NPCs).
+    private val NPC_REGEX = Regex("""^\[NPC\]\s""", RegexOption.IGNORE_CASE)
     // "[123] ⚒ [MVP+] Name ✫: hi" — level, symbol, rank and emblem are all optional.
     private val PUBLIC_REGEX = Regex("""^(?:\[\d+\]\s*)?(?:[^\w\s\[\]]\s*)?(?:\[[^\]]+\]\s*)?([A-Za-z0-9_]{1,16})(?:\s*[^\w\s:\[\]]+)?:\s(.+)$""")
 
@@ -84,6 +86,9 @@ object ChatTranslator {
     // ── Parsing ──────────────────────────────────────────────────────
 
     fun parse(plain: String): ChatLine? {
+        // "[NPC] Oen: ..." is scripted dialogue, not a player: the public regex would
+        // otherwise read "[NPC]" as a rank tag and offer to translate every line of it.
+        if (NPC_REGEX.containsMatchIn(plain)) return null
         DM_REGEX.find(plain)?.let { m ->
             return ChatLine(Channel.DM, m.groupValues[2], m.groupValues[3].trim())
         }
