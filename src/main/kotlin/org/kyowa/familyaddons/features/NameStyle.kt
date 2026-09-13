@@ -266,6 +266,50 @@ object NameStyle {
         return out
     }
 
+    // ── compat: legacy strings carrying <#rrggbb> tags ──────────────────
+
+    /**
+     * SkyHanni's formattedTextCompat serialises a component to a legacy string and writes
+     * hex colours as `<#rrggbb>` tags; its Compact Tab List then wraps that string back in
+     * Component.literal, so the tags (our animation markers included) were drawn as text.
+     * Rebuilds the styled component: a tag sets the colour, a § code sets a legacy colour or
+     * format, the text between them becomes styled runs. Null when the string has no tag.
+     */
+    fun fromHexTagged(text: String): Component? {
+        if (!text.contains("<#")) return null
+        val out: MutableComponent = Component.empty()
+        var style = Style.EMPTY
+        val run = StringBuilder()
+        fun flush() {
+            if (run.isNotEmpty()) { out.append(Component.literal(run.toString()).withStyle(style)); run.setLength(0) }
+        }
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            if (c == '<' && i + 8 < text.length && text[i + 1] == '#' && text[i + 8] == '>') {
+                val hex = text.substring(i + 2, i + 8).toIntOrNull(16)
+                if (hex != null) { flush(); style = style.withColor(hex); i += 9; continue }
+            }
+            if (c == '§' && i + 1 < text.length) {
+                val code = text[i + 1].lowercaseChar()
+                flush()
+                LEGACY[code]?.let { style = Style.EMPTY.withColor(it) }
+                when (code) {
+                    'k' -> style = style.withObfuscated(true)
+                    'l' -> style = style.withBold(true)
+                    'm' -> style = style.withStrikethrough(true)
+                    'n' -> style = style.withUnderlined(true)
+                    'o' -> style = style.withItalic(true)
+                    'r' -> style = Style.EMPTY
+                }
+                i += 2; continue
+            }
+            run.append(c); i++
+        }
+        flush()
+        return out
+    }
+
     // ── animation (font hook) ───────────────────────────────────────────
 
     private fun animated(): Boolean = FamilyConfigManager.config.nameChanger.animate
