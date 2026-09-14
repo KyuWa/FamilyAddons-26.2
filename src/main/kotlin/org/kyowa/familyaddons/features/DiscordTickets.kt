@@ -182,17 +182,22 @@ object DiscordTickets {
      * if a "claimed by" message follows; a repeat only re-orders, it does not reset).
      */
     private fun onClaimed(t: Ticket) {
-        if (!logsRuns(t)) return
         val full = recent.firstOrNull { it.channelId == t.channelId }?.let {
             Ticket(it.server, t.ign.ifEmpty { it.ign }, t.tier.ifEmpty { it.tier }, it.runs, it.channelId, it.serverId, it.messageId)
         } ?: t
-        val again = claimed.remove(full.channelId) != null
-        claimed[full.channelId] = full
+        val again = claimed.containsKey(full.channelId)
+        // Every server confirms the claim in chat; only the ones with a log command
+        // (SkyBlockZ, Skyblock Maniacs) start counting runs for the Kuudra-down prompt.
+        if (logsRuns(full)) {
+            claimed.remove(full.channelId)
+            claimed[full.channelId] = full
+            if (!again) runsDone[full.channelId] = 0
+        }
         if (again) return
-        runsDone[full.channelId] = 0
-        Minecraft.getInstance().player?.sendSystemMessage(
-            FaChat.prefixed("§aClaimed §b${full.ign} §8| ${tierColor(full.tier)}${full.tier} §fx${full.runs} §8| §7after each §fKUUDRA DOWN! §7you get a prompt to log it (§e${logLabel(full)}§7)")
-        )
+        val head = "§aClaimed §b${full.ign} §8| ${tierColor(full.tier)}${full.tier} §fx${full.runs}"
+        val tail = if (logsRuns(full)) " §8| §7after each §fKUUDRA DOWN! §7you get a prompt to log it (§e${logLabel(full)}§7)"
+                   else " §8| §7${full.server} §8(§7no log command§8)"
+        Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed(head + tail))
     }
 
     /**
