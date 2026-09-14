@@ -20,7 +20,7 @@ class SafariConfig {
     // ── highlights ─────────────────────────────────────────────────────
 
     @Expose @JvmField
-    @ConfigOption(name = "Highlight Critters", desc = "Outline every Safari species, the awkward ones included — Hideyho, Hideonwall, Hideonfloor, Duplico, Bloodbat and the rest of the 37. Matched by the name label Hypixel puts above each critter, so the ones that render as bare vanilla mobs are caught too.")
+    @ConfigOption(name = "Highlight Critters", desc = "Outline every Safari species, the awkward ones included — Hideyho, Hideonwall, Hideonfloor, Duplico, Bloodbat and the rest. Same matching the bestiary zone highlight used for the Safari, now owned here.")
     @ConfigEditorBoolean
     var critterEsp = false
 

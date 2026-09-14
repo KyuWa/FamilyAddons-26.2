@@ -171,6 +171,37 @@ object BestiaryZoneHighlight {
     @Volatile private var autoZoneIndex: Int = -1
     private var autoTicker = 0
 
+    // ── Critter Safari ────────────────────────────────────────────────
+    // The Safari is no longer pickable in the bestiary dropdown; Auto still
+    // resolves to it, and then the Critter Safari category owns the switch,
+    // the colour and the style. Same matching (NEU roster + nameless entity
+    // rules), different owner.
+
+    /** True when the zone in effect is the Critter Safari. */
+    fun safariZone(): Boolean {
+        val idx = resolvedZoneIndex()
+        return idx > 0 && idx < ZONES.size && ZONES[idx] == "Critter Safari"
+    }
+
+    /** Whether zone highlighting runs at all: the Safari toggle there, the bestiary one elsewhere. */
+    fun zoneOn(): Boolean {
+        if (safariZone()) {
+            val s = FamilyConfigManager.config.safari
+            return s.enabled && s.critterEsp
+        }
+        val cfg = FamilyConfigManager.config.highlight
+        return cfg.enabled && cfg.zoneHighlightEnabled
+    }
+
+    /** Colour string of the zone highlight. */
+    fun zoneColor(): String =
+        if (safariZone()) FamilyConfigManager.config.safari.critterEspColor
+        else FamilyConfigManager.config.highlight.bestiaryColor
+
+    /** The Safari is outline-only by design; elsewhere it is the user's pick. */
+    fun zoneOutline(): Boolean =
+        safariZone() || FamilyConfigManager.config.highlight.bestiaryDrawingStyle == 1
+
     /** The zone in effect: the picked one, or the area-derived one under Auto. */
     fun resolvedZoneIndex(): Int {
         val sel = FamilyConfigManager.config.highlight.bestiaryZone
@@ -204,8 +235,7 @@ object BestiaryZoneHighlight {
             a.contains("kuudra") -> "Kuudra"
             a.contains("torrhus") -> "Torrhus Canyon"
             a.contains("lotus") -> "Lotus Atoll"
-            // The Safari has its own category now (SafariCritterEsp), so Auto
-            // never resolves to it and the two cannot double-highlight.
+            a.contains("safari") -> "Critter Safari"
             else -> return -1
         }
         return ZONES.indexOf(name)
@@ -385,17 +415,19 @@ object BestiaryZoneHighlight {
         ClientTickEvents.END_CLIENT_TICK.register { _ ->
             val cfg = FamilyConfigManager.config.highlight
 
-            if (cfg.bestiaryZone == 0 && cfg.zoneHighlightEnabled && ++autoTicker >= 20) { autoTicker = 0; pollAutoZone() }
+            val safariWants = FamilyConfigManager.config.safari.let { it.enabled && it.critterEsp }
+            if (cfg.bestiaryZone == 0 && (cfg.zoneHighlightEnabled || safariWants) && ++autoTicker >= 20) { autoTicker = 0; pollAutoZone() }
             val zone = resolvedZoneIndex()
 
             val zoneChanged = zone != lastZoneIndex
-            val enabledChanged = cfg.zoneHighlightEnabled != lastZoneHighlightEnabled
+            val on = zoneOn()
+            val enabledChanged = on != lastZoneHighlightEnabled
             val hideMaxedChanged = cfg.hideMaxedMobs != lastHideMaxed
             lastZoneIndex = zone
-            lastZoneHighlightEnabled = cfg.zoneHighlightEnabled
+            lastZoneHighlightEnabled = on
             lastHideMaxed = cfg.hideMaxedMobs
 
-            if (!cfg.zoneHighlightEnabled) {
+            if (!on) {
                 if (activeMobNames.isNotEmpty()) { activeMobNames = emptySet(); allZoneMobNames = emptySet() }
                 return@register
             }
@@ -530,7 +562,7 @@ object BestiaryZoneHighlight {
     }
 
     fun checkMaxFromTablist() {
-        if (!FamilyConfigManager.config.highlight.zoneHighlightEnabled) return
+        if (!zoneOn()) return
         if (allZoneMobNames.isEmpty()) return
 
         val cfg = FamilyConfigManager.config.highlight

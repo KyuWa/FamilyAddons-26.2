@@ -25,17 +25,19 @@ object EntityHighlight {
     /** True when any bestiary highlight source is configured (master toggle
      *  is checked separately — the category's Enable Highlight gates all). */
     private fun bestiaryActive(): Boolean {
+        // The zone toggle is owned by the Safari category inside the Safari, so it is
+        // checked before this category's master switch.
+        if (BestiaryZoneHighlight.zoneOn() && BestiaryZoneHighlight.resolvedZoneIndex() > 0) return true
         val cfg = FamilyConfigManager.config.highlight
         if (!cfg.enabled) return false
-        if (cfg.zoneHighlightEnabled && BestiaryZoneHighlight.resolvedZoneIndex() > 0) return true
         return cfg.mobName.isNotBlank()
     }
 
     private fun shouldScan(): Boolean {
+        if (BestiaryZoneHighlight.zoneOn() && BestiaryZoneHighlight.resolvedZoneIndex() > 0) return true
         val cfg = FamilyConfigManager.config.highlight
         if (!cfg.enabled) return false
         if (cfg.mobNames.isNotBlank()) return true
-        if (cfg.zoneHighlightEnabled && BestiaryZoneHighlight.resolvedZoneIndex() > 0) return true
         return cfg.mobName.isNotBlank()
     }
 
@@ -67,7 +69,7 @@ object EntityHighlight {
             return true
         }
 
-        if (bestiary.zoneHighlightEnabled && customNameRaw != null) {
+        if (BestiaryZoneHighlight.zoneOn() && customNameRaw != null && entity !is ArmorStand) {
             val zoneNames = BestiaryZoneHighlight.activeMobNames
                 .map { it.lowercase() }.filter { it.isNotBlank() }
             if (zoneNames.isNotEmpty()) {
@@ -77,7 +79,7 @@ object EntityHighlight {
         }
         // Mobs Hypixel renders without any nametag (e.g. Beeheemoth = a giant
         // bee): matched by entity type + size from the zone's entity rules.
-        if (bestiary.zoneHighlightEnabled && entity !is ArmorStand && entity is LivingEntity) {
+        if (BestiaryZoneHighlight.zoneOn() && entity !is ArmorStand && entity is LivingEntity) {
             if (BestiaryZoneHighlight.matchesNameless(entity)) return true
         }
         return false
@@ -171,17 +173,16 @@ object EntityHighlight {
         if (entity in SparklingCritterHighlight.trackedEntities()) {
             return parseOutlineColor(safari.sparklingColor)
         }
-        if (entity in org.kyowa.familyaddons.features.safari.SafariCritterEsp.trackedEntities()) {
-            return parseOutlineColor(safari.critterEspColor)
+        // Zone highlight in outline style; inside the Safari that is always on and
+        // owned by the Safari category, so it is checked before the master switch.
+        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && entity in bestiaryHighlighted) {
+            return parseOutlineColor(BestiaryZoneHighlight.zoneColor())
         }
         if (!cfg.enabled) return 0
         // Sparkling overrides the normal colors for both styles.
         val sparklingSet = SparklingCritterHighlight.trackedEntities()
         if (cfg.drawingStyle == 1 && entity in highlighted) {
             return parseOutlineColor(if (entity in sparklingSet) safari.sparklingColor else cfg.color)
-        }
-        if (bestiaryActive() && cfg.bestiaryDrawingStyle == 1 && entity in bestiaryHighlighted) {
-            return parseOutlineColor(if (entity in sparklingSet) safari.sparklingColor else cfg.bestiaryColor)
         }
         return 0
     }
@@ -242,7 +243,7 @@ object EntityHighlight {
     fun onWorldRender(matrices: PoseStack, collector: SubmitNodeCollector, cam: Vec3) {
         val config = FamilyConfigManager.config.highlight
         // Safari highlights draw even with this category off; they are their own feature.
-        if (!config.enabled && SparklingCritterHighlight.trackedEntities().isEmpty()) return
+        if (!config.enabled && SparklingCritterHighlight.trackedEntities().isEmpty() && !BestiaryZoneHighlight.zoneOn()) return
         val shulkerTargets = ShulkerBoxHighlight.trackedEntities() + SparklingCritterHighlight.trackedEntities()
         val sparklingSet = SparklingCritterHighlight.trackedEntities().toSet()
         if (highlighted.isEmpty() && bestiaryHighlighted.isEmpty() && shulkerTargets.isEmpty()) return
@@ -279,8 +280,8 @@ object EntityHighlight {
         if (config.drawingStyle == 0 && highlighted.isNotEmpty()) {
             drawBoxes(highlighted - sparklingSet, Triple(r, g, b))
         }
-        if (bestiaryActive() && config.bestiaryDrawingStyle == 0 && bestiaryHighlighted.isNotEmpty()) {
-            drawBoxes(bestiaryHighlighted - sparklingSet, parseRgb(config.bestiaryColor, Triple(1f, 0.67f, 0f)))
+        if (bestiaryActive() && !BestiaryZoneHighlight.zoneOutline() && bestiaryHighlighted.isNotEmpty()) {
+            drawBoxes(bestiaryHighlighted - sparklingSet, parseRgb(BestiaryZoneHighlight.zoneColor(), Triple(1f, 0.67f, 0f)))
         }
         // Outline style cannot show an invisible mob (it is never rendered, so the
         // outline pass never sees it): fall back to a box for those.
@@ -288,9 +289,9 @@ object EntityHighlight {
             val hidden = highlighted.filterTo(HashSet()) { it.isInvisible }
             if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, Triple(r, g, b))
         }
-        if (bestiaryActive() && config.bestiaryDrawingStyle == 1 && bestiaryHighlighted.isNotEmpty()) {
+        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && bestiaryHighlighted.isNotEmpty()) {
             val hidden = bestiaryHighlighted.filterTo(HashSet()) { it.isInvisible }
-            if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, parseRgb(config.bestiaryColor, Triple(1f, 0.67f, 0f)))
+            if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, parseRgb(BestiaryZoneHighlight.zoneColor(), Triple(1f, 0.67f, 0f)))
         }
 
         // ── Tracer lines ──────────────────────────────────────────────
