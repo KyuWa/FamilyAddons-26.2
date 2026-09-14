@@ -25,6 +25,7 @@ object WorldRenderDispatcher {
                 !ShulkerBoxHighlight.hasBoxes() &&
                 !SparklingCritterHighlight.hasTargets() &&
                 !FloorDropHighlight.hasTargets() &&
+                !org.kyowa.familyaddons.features.safari.BeeSpotHighlight.hasTargets() &&
                 !DungeonHighlight.hasRender() &&
                 !PearlWaypoints.hasWaypoints() &&
                 !PileWaypoints.hasBeams() &&
@@ -53,6 +54,7 @@ object WorldRenderDispatcher {
             ShulkerBoxHighlight.onWorldRender(matrices, collector, camera)
             SparklingCritterHighlight.onWorldRender(matrices, collector, camera)
             FloorDropHighlight.onWorldRender(matrices, collector, camera)
+            org.kyowa.familyaddons.features.safari.BeeSpotHighlight.onWorldRender(matrices, collector, camera)
             DungeonHighlight.onWorldRender(matrices, collector, camera)
             PearlWaypoints.onWorldRender(matrices, collector, camera)
             PileWaypoints.onWorldRender(matrices, collector, camera)

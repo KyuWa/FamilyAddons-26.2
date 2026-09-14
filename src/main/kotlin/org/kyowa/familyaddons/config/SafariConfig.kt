@@ -54,6 +54,21 @@ class SafariConfig {
     @ConfigEditorBoolean
     var hideyhoQuickAccept = false
 
+    @Expose @JvmField
+    @ConfigOption(name = "Highlight Bee Spots", desc = "Mark the eleven places in the Forest where a bee block sits. All marked from the start; looking at one settles it: a bee nest recolours the mark, a beehive or an empty spot clears it, and a nest is crossed off once you punch it and a bee comes out. Nothing is read through a wall.")
+    @ConfigEditorBoolean
+    var beeSpots = false
+
+    @Expose @JvmField
+    @ConfigOption(name = "Bee Spot Color", desc = "Colour of a spot you have not looked at yet.")
+    @ConfigEditorColour
+    var beeSpotColor = "0:255:85:255:85"
+
+    @Expose @JvmField
+    @ConfigOption(name = "Bee Nest Color", desc = "Colour of a spot seen to hold a bee nest, the one worth walking to.")
+    @ConfigEditorColour
+    var beeNestColor = "0:255:255:204:34"
+
     // ── run tracker ────────────────────────────────────────────────────
 
     @Expose @JvmField
