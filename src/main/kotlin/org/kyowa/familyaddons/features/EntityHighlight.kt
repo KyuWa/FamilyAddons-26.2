@@ -69,7 +69,11 @@ object EntityHighlight {
             return true
         }
 
-        if (BestiaryZoneHighlight.zoneOn() && customNameRaw != null && entity !is ArmorStand) {
+        // Hypixel puts a critter's name on an invisible armour stand riding above the
+        // mob; matching that stand (and boxing it, as invisible entities fall back to)
+        // is exactly how the bestiary zone highlighted every named critter. Do not
+        // exclude armour stands here.
+        if (BestiaryZoneHighlight.zoneOn() && customNameRaw != null) {
             val zoneNames = BestiaryZoneHighlight.activeMobNames
                 .map { it.lowercase() }.filter { it.isNotBlank() }
             if (zoneNames.isNotEmpty()) {
@@ -175,7 +179,10 @@ object EntityHighlight {
         }
         // Zone highlight in outline style; inside the Safari that is always on and
         // owned by the Safari category, so it is checked before the master switch.
-        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && entity in bestiaryHighlighted) {
+        // Invisible entities are skipped: the glow shader would draw their silhouette
+        // (the silverfish hiding inside a Duplico, the name / capture armour stands),
+        // and those already get the block box from the invisible fallback below.
+        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && entity in bestiaryHighlighted && !entity.isInvisible) {
             return parseOutlineColor(BestiaryZoneHighlight.zoneColor())
         }
         if (!cfg.enabled) return 0
