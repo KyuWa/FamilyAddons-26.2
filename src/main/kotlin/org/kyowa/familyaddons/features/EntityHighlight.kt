@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.rendertype.RenderType
 import com.mojang.blaze3d.vertex.PoseStack
+import net.minecraft.world.entity.Display
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.decoration.ArmorStand
@@ -184,7 +185,9 @@ object EntityHighlight {
         // Invisible entities are skipped: the glow shader would draw their silhouette
         // (the silverfish hiding inside a Duplico, the name / capture armour stands),
         // and those already get the block box from the invisible fallback below.
-        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && entity in bestiaryHighlighted && !entity.isInvisible && entity is LivingEntity) {
+        // Display entities (a Gimmiegold is an item display over an invisible fish) render
+        // through the outline pass like mobs do, so they are outlined rather than boxed.
+        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && entity in bestiaryHighlighted && !entity.isInvisible && (entity is LivingEntity || entity is Display)) {
             return parseOutlineColor(BestiaryZoneHighlight.zoneColor())
         }
         if (!cfg.enabled) return 0
@@ -305,7 +308,7 @@ object EntityHighlight {
         if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && bestiaryHighlighted.isNotEmpty()) {
             // Invisible mobs and non-living targets (interaction boxes, displays) have
             // nothing for the outline pass to draw: they get the box instead.
-            val hidden = bestiaryHighlighted.filterTo(HashSet()) { it.isInvisible || it !is LivingEntity }
+            val hidden = bestiaryHighlighted.filterTo(HashSet()) { it.isInvisible || (it !is LivingEntity && it !is Display) }
             if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, parseRgb(BestiaryZoneHighlight.zoneColor(), Triple(1f, 0.67f, 0f)))
         }
 
