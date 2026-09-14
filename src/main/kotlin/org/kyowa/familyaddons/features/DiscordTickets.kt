@@ -141,6 +141,7 @@ object DiscordTickets {
             "ticket" -> mc.execute { onTicket(ticket) }
             "ticket_closed" -> mc.execute { onClosed(ticket) }
             "ticket_claimed" -> mc.execute { onClaimed(ticket) }
+            "ticket_taken" -> { val by = str("claimer"); mc.execute { onTaken(ticket, by) } }
             "ticket_confirm" -> mc.execute { onConfirm(ticket) }
             else -> lastError = "unknown action $action"
         }
@@ -191,6 +192,22 @@ object DiscordTickets {
         runsDone[full.channelId] = 0
         Minecraft.getInstance().player?.sendSystemMessage(
             FaChat.prefixed("§aClaimed §b${full.ign} §8| ${tierColor(full.tier)}${full.tier} §fx${full.runs} §8| §7after each §fKUUDRA DOWN! §7you get a prompt to log it (§e${logLabel(full)}§7)")
+        )
+    }
+
+    /**
+     * Somebody else got there first (the confirmation named another carrier, or the
+     * ticket bot answered our click with "This ticket is already claimed!"). Never
+     * treat the ticket as ours: no run counting, no log prompt.
+     */
+    private fun onTaken(t: Ticket, claimer: String) {
+        claimed.remove(t.channelId)
+        runsDone.remove(t.channelId)
+        val known = recent.firstOrNull { it.channelId == t.channelId }
+        val ign = t.ign.ifEmpty { known?.ign ?: "?" }
+        val by = claimer.trim().ifEmpty { "someone else" }
+        Minecraft.getInstance().player?.sendSystemMessage(
+            FaChat.prefixed("§cAlready claimed §8| §b$ign §8| §7by §f$by")
         )
     }
 
