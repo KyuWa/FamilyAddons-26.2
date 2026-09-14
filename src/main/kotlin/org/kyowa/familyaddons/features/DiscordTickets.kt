@@ -201,7 +201,7 @@ object DiscordTickets {
     private fun isManiacs(t: Ticket) = t.server.equals("Skyblock Maniacs", ignoreCase = true)
 
     /** What the log command will say, for hovers and chat: "/log Kuudra infernal" (SBM) or "T5 Kuudra" (/logrep). */
-    private fun logLabel(t: Ticket): String = if (isManiacs(t)) "/log Kuudra ${t.tier.trim().lowercase()}" else logType(t.tier)
+    private fun logLabel(t: Ticket): String = if (isManiacs(t)) "/log kuudra ${t.tier.trim().lowercase()}" else logType(t.tier)
 
     /** Ticket tier -> the /logrep "type" choice: Basic = T1 ... Infernal = T5. */
     private fun logType(tier: String): String {
@@ -229,7 +229,8 @@ object DiscordTickets {
      * `/fa logrep <channelId> <amt>`: clicked from the Kuudra-down prompt. Tells the
      * bot to run the ticket bot's slash command in that ticket channel and waits for
      * its answer: SkyBlockZ `/logrep type:<T5 Kuudra> amt:<n>`, Skyblock Maniacs
-     * `/log service:Kuudra tier:<infernal> amount:<n>`. Never automatic: only ever
+     * `/log service:kuudra tier:<infernal> amount:<n>` (SBM validates the values
+     * case-sensitively: "Kuudra" is rejected). Never automatic: only ever
      * from that click.
      */
     fun logRep(channelId: String, amt: Int) {
@@ -239,7 +240,7 @@ object DiscordTickets {
         val maniacs = isManiacs(t)
         val type = logType(t.tier)
         val sbmTier = t.tier.trim().lowercase()
-        val sent = if (maniacs) "/log service: Kuudra tier: $sbmTier amount: $amt" else "/logrep type: $type amt: $amt"
+        val sent = if (maniacs) "/log service: kuudra tier: $sbmTier amount: $amt" else "/logrep type: $type amt: $amt"
         Thread({
             try {
                 val reply = Socket().use { s ->
@@ -249,7 +250,7 @@ object DiscordTickets {
                     w.write(JsonObject().apply {
                         addProperty("channel_id", channelId)
                         if (maniacs) {
-                            addProperty("action", "log"); addProperty("service", "Kuudra")
+                            addProperty("action", "log"); addProperty("service", "kuudra")
                             addProperty("tier", sbmTier); addProperty("amount", amt)
                         } else {
                             addProperty("action", "logrep"); addProperty("type", type); addProperty("amt", amt)
