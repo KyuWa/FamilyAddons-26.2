@@ -121,6 +121,24 @@ class HudEditorScreen : Screen(Component.literal("FA HUD Editor")) {
             }
         ))
 
+        // Critter Safari missing panel
+        elements.add(HudElement(
+            id = "safariMissing", label = "Safari Missing",
+            x = FamilyConfigManager.config.safari.missingHudX,
+            y = FamilyConfigManager.config.safari.missingHudY,
+            w = 120, h = 45,
+            scale = FamilyConfigManager.config.safari.missingHudScale.toFloatOrNull() ?: 1f,
+            canScale = true,
+            onSave = { elem ->
+                FamilyConfigManager.config.safari.missingHudX = elem.x
+                FamilyConfigManager.config.safari.missingHudY = elem.y
+                FamilyConfigManager.config.safari.missingHudScale = "%.1f".format(elem.scale)
+            },
+            renderContent = { ctx, _ ->
+                org.kyowa.familyaddons.features.safari.SafariTracker.renderMissingPreview(ctx)
+            }
+        ))
+
         // Kuudra DT Title
         val dtScale = DtTitle.getScale()
         val dtPlain = DtTitle.PREVIEW_TEXT.replace(COLOR_CODE_REGEX, "")

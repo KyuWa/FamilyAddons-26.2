@@ -1,5 +1,6 @@
 package org.kyowa.familyaddons.features.safari
 
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.resources.Identifier
 import org.kyowa.familyaddons.COLOR_CODE_REGEX
 import org.kyowa.familyaddons.config.FamilyConfigManager
+import org.kyowa.familyaddons.features.DevTools
 import org.kyowa.familyaddons.util.FaChat
 import org.kyowa.familyaddons.util.HypixelLocation
 
@@ -70,6 +72,36 @@ object SafariTracker {
             Identifier.fromNamespaceAndPath("familyaddons", "safari_hud"),
             HudElement { ctx, _ -> runCatching { renderHud(ctx) } }
         )
+        HudElementRegistry.addLast(
+            Identifier.fromNamespaceAndPath("familyaddons", "safari_missing_hud"),
+            HudElement { ctx, _ -> runCatching { renderMissingHud(ctx) } }
+        )
+        // The biome you stand in is read off the scoreboard once a second, not per frame.
+        ClientTickEvents.END_CLIENT_TICK.register { client ->
+            if (++biomeTicker < 20) return@register
+            biomeTicker = 0
+            currentBiome = runCatching { readBiome(client) }.getOrNull()
+        }
+    }
+
+    // ── where you are ─────────────────────────────────────────────────────
+
+    @Volatile private var currentBiome: SafariBiome? = null
+    private var biomeTicker = 0
+
+    /** The Safari biome named on the scoreboard area line ("⏣ Icy Biome"), or null. */
+    private fun readBiome(client: Minecraft): SafariBiome? {
+        if (client.level == null) return null
+        for (line in DevTools.getScoreboardLines(client)) {
+            SafariBiome.fromAreaName(line)?.let { return it }
+        }
+        return null
+    }
+
+    /** Species in [biome] nobody in the party has caught yet, alphabetical. */
+    private fun missingIn(biome: SafariBiome): List<String> {
+        val everyone = caught.values.flatten().toSet()
+        return SafariCritters.inBiome(biome).map { it.name }.filter { it !in everyone }.sorted()
     }
 
     // ── parsing ───────────────────────────────────────────────────────────
@@ -310,6 +342,41 @@ object SafariTracker {
         }
 
         m.popMatrix()
+    }
+
+    private fun renderMissingHud(ctx: GuiGraphicsExtractor) {
+        val cfg = FamilyConfigManager.config.safari
+        if (!cfg.enabled || !cfg.tracker || !cfg.missingHud) return
+        val biome = currentBiome ?: return
+        val missing = missingIn(biome)
+
+        val tr = Minecraft.getInstance().font
+        val m = ctx.pose()
+        m.pushMatrix()
+        m.translate(cfg.missingHudX.toFloat(), cfg.missingHudY.toFloat())
+        val scale = cfg.missingHudScale.toFloatOrNull() ?: 1f
+        m.scale(scale, scale)
+
+        var y = 3
+        if (missing.isEmpty()) {
+            ctx.text(tr, "${biome.color}§l${biome.displayName} §adone ✔", 4, y, -1, true)
+        } else {
+            ctx.text(tr, "${biome.color}§lMissing in ${biome.displayName} §8(§f${missing.size}§8)", 4, y, -1, true)
+            y += 12
+            for (name in missing) {
+                ctx.text(tr, "§7- §f$name", 4, y, -1, true)
+                y += 10
+            }
+        }
+        m.popMatrix()
+    }
+
+    /** Preview for the missing panel in the HUD editor. */
+    fun renderMissingPreview(ctx: GuiGraphicsExtractor) {
+        val tr = Minecraft.getInstance().font
+        var y = 3
+        ctx.text(tr, "§b§lMissing in Icy §8(§f3§8)", 4, y, -1, true); y += 12
+        for (name in listOf("Billygoat", "Troodon", "Wumpa")) { ctx.text(tr, "§7- §f$name", 4, y, -1, true); y += 10 }
     }
 
     /** Preview lines for the HUD editor, so the box has a sensible size before a run. */

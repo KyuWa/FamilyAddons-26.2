@@ -67,6 +67,11 @@ class SafariConfig {
     var trackerHud = true
 
     @Expose @JvmField
+    @ConfigOption(name = "Missing panel", desc = "Second panel listing the species still uncaught in the biome you are standing in, read from the scoreboard area line. Shows a tick once the biome is cleared. Movable in the HUD editor.")
+    @ConfigEditorBoolean
+    var missingHud = true
+
+    @Expose @JvmField
     @ConfigOption(name = "Per-player lines", desc = "List each player under the biome totals, showing the biome they are working and how far it is.")
     @ConfigEditorBoolean
     var perPlayerLines = true
@@ -105,6 +110,10 @@ class SafariConfig {
     @Expose @JvmField var runsDone = 0
     @Expose @JvmField var lifetimeCatches = 0
     @Expose @JvmField var bestUnique = 0
+
+    @Expose @JvmField var missingHudX = 10
+    @Expose @JvmField var missingHudY = 170
+    @Expose @JvmField var missingHudScale = "1.0"
 
     @Expose @JvmField var hudX = 10
     @Expose @JvmField var hudY = 80
