@@ -346,11 +346,13 @@ object DiscordTickets {
     /**
      * Claiming: the bot clicks the ticket message's Claim button (custom_id
      * "ticket:claim:<tier>" / label "Claim") and nothing else, never a slash
-     * command. Kuudra Gang and Skyblock Maniacs tickets carry that button;
-     * SkyBlockZ is unverified, so no button.
+     * command. Kuudra Gang ("ticket:claim:<tier>" / "Claim"), Skyblock Maniacs
+     * (unlabelled 📌, id "claim-ticket") and SkyBlockZ ("📌 Claim", verified
+     * 2026-09-14) all carry one.
      */
     private fun canClaim(t: Ticket) =
-        t.server.equals("Skyblock Maniacs", ignoreCase = true) || t.server.equals("Kuudra Gang", ignoreCase = true)
+        t.server.equals("Skyblock Maniacs", ignoreCase = true) || t.server.equals("Kuudra Gang", ignoreCase = true) ||
+            t.server.equals("SkyBlockZ", ignoreCase = true)
 
     private fun tierColor(tier: String): String = when (tier.lowercase()) {
         "infernal" -> "§4"
@@ -712,7 +714,7 @@ object DiscordTickets {
         if (!enabled()) return
         val t = recent.firstOrNull { it.channelId == channelId }
         if (t != null && !canClaim(t)) {
-            FaChat.send("§cClaim is only wired for Kuudra Gang and Skyblock Maniacs right now.")
+            FaChat.send("§cClaim is only wired for Kuudra Gang, Skyblock Maniacs and SkyBlockZ right now.")
             return
         }
         if (t != null && t.ign.isNotEmpty()) {
