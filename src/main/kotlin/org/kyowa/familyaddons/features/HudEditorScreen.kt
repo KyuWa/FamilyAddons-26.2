@@ -103,6 +103,24 @@ class HudEditorScreen : Screen(Component.literal("FA HUD Editor")) {
             renderContent = { ctx, _ -> InfernalKeyTracker.renderLines(ctx) }
         ))
 
+        // Critter Safari tracker
+        elements.add(HudElement(
+            id = "safariTracker", label = "Critter Safari",
+            x = FamilyConfigManager.config.safari.hudX,
+            y = FamilyConfigManager.config.safari.hudY,
+            w = 150, h = 55,
+            scale = FamilyConfigManager.config.safari.hudScale.toFloatOrNull() ?: 1f,
+            canScale = true,
+            onSave = { elem ->
+                FamilyConfigManager.config.safari.hudX = elem.x
+                FamilyConfigManager.config.safari.hudY = elem.y
+                FamilyConfigManager.config.safari.hudScale = "%.1f".format(elem.scale)
+            },
+            renderContent = { ctx, _ ->
+                org.kyowa.familyaddons.features.safari.SafariTracker.renderPreview(ctx)
+            }
+        ))
+
         // Kuudra DT Title
         val dtScale = DtTitle.getScale()
         val dtPlain = DtTitle.PREVIEW_TEXT.replace(COLOR_CODE_REGEX, "")

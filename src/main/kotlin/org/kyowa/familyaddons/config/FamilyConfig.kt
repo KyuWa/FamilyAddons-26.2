@@ -78,6 +78,10 @@ class FamilyConfig : Config() {
     var foraging = ForagingConfig()
 
     @Expose @JvmField
+    @Category(name = "Critter Safari", desc = "Critter Safari — who has caught what, per biome")
+    var safari = SafariConfig()
+
+    @Expose @JvmField
     @Category(name = "Dev", desc = "Developer debug tools")
     var dev = DevConfig()
 }

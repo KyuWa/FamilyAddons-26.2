@@ -174,6 +174,12 @@ object TestCommand {
                                 1
                             }))
 
+                    // /fa safari [reset] — Critter Safari per-biome tracker
+                    .then(literal("safari")
+                        .executes { org.kyowa.familyaddons.features.safari.SafariTracker.printSummary(); 1 }
+                        .then(literal("reset")
+                            .executes { org.kyowa.familyaddons.features.safari.SafariTracker.reset(true); 1 }))
+
                     // /fa ticketopen <channel_id> — clicked from a ticket line: jump the Discord app to it
                     .then(literal("ticketopen").requires { DevAccess.isDev() }
                         .then(argument("channel", StringArgumentType.word())
