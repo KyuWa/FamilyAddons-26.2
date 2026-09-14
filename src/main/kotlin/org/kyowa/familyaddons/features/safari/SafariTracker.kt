@@ -97,13 +97,20 @@ object SafariTracker {
     @Volatile private var currentBiome: SafariBiome? = null
     private var biomeTicker = 0
 
-    /** The Safari biome named on the scoreboard area line ("⏣ Icy Biome"), or null. */
+    /**
+     * The biome you stand in. Neither the scoreboard nor the tab list names it on
+     * the live server, so it comes from your position via [SafariAreaMap]; a
+     * scoreboard area line naming a biome still wins if one ever appears.
+     */
     private fun readBiome(client: Minecraft): SafariBiome? {
+        val player = client.player ?: return null
         if (client.level == null) return null
         for (line in DevTools.getScoreboardLines(client)) {
             SafariBiome.fromAreaName(line)?.let { return it }
         }
-        return null
+        val area = HypixelLocation.areaName() ?: return null
+        if (!area.contains("safari", ignoreCase = true)) return null
+        return SafariAreaMap.biomeAt(player.x, player.y, player.z)
     }
 
     /** Species in [biome] nobody in the party has caught yet, alphabetical. */
