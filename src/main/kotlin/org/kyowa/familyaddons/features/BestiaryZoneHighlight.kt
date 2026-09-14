@@ -74,6 +74,12 @@ object BestiaryZoneHighlight {
         val variants: Set<String>? = null,
         /** Item id the entity must wear on its head, e.g. "player_head"; null = any. */
         val headItem: String? = null,
+        /**
+         * Require a name stand carrying this mob's name within a few blocks. Tells a
+         * Gazer (head-wearing stand + "Gazer" label above) from a fairy soul (the same
+         * stand, no label).
+         */
+        val needsLabel: Boolean = false,
     )
 
     /**
@@ -137,7 +143,8 @@ object BestiaryZoneHighlight {
         "rockmite"   to EntityRule("interaction", minWidth = 0.4f, maxWidth = 0.5f),
         // Entity dump 2026-09-14 (Safari): a Gazer is an INVISIBLE armour stand (0.5 wide)
         // wearing a player head, with a 0x0 name stand above it that no box can show.
-        "gazer"      to EntityRule("armor_stand", minWidth = 0.4f, maxWidth = 0.6f, headItem = "player_head"),
+        // A fairy soul is the identical stand with no label, hence needsLabel.
+        "gazer"      to EntityRule("armor_stand", minWidth = 0.4f, maxWidth = 0.6f, headItem = "player_head", needsLabel = true),
         // Entity dump 2026-09-09: Duplico hides as a block — an INVISIBLE silverfish
         // (0.4 wide) under an item display + 1.1 interaction box at the same spot.
         // EntityHighlight draws a full block box for it since the mob never renders.
@@ -390,9 +397,19 @@ object BestiaryZoneHighlight {
                 val id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.item).path
                 if (stack.isEmpty || id != head) continue
             }
+            if (rule.needsLabel && !labelNearby(entity, name)) continue
             return true
         }
         return false
+    }
+
+    /** A name stand within 1.5 blocks sideways / 3 up whose stripped name is [name]. */
+    private fun labelNearby(entity: net.minecraft.world.entity.Entity, name: String): Boolean {
+        val box = entity.boundingBox.inflate(1.5, 3.0, 1.5)
+        return entity.level().getEntities(entity, box) { other ->
+            val label = other.customName?.string?.replace(COLOR_CODE_REGEX, "")?.trim() ?: return@getEntities false
+            label.equals(name, ignoreCase = true)
+        }.isNotEmpty()
     }
 
     private fun parseEntityRule(obj: JsonObject): EntityRule? {
@@ -406,6 +423,7 @@ object BestiaryZoneHighlight {
             obj.get("maxWidth")?.asFloat ?: Float.MAX_VALUE,
             variants,
             obj.get("headItem")?.asString?.trim()?.lowercase()?.removePrefix("minecraft:")?.takeIf { it.isNotEmpty() },
+            obj.get("needsLabel")?.asBoolean ?: false,
         )
     }
     private var repoData: Map<String, List<MobEntry>> = emptyMap()
