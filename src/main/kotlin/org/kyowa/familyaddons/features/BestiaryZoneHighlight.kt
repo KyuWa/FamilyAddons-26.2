@@ -219,8 +219,17 @@ object BestiaryZoneHighlight {
     fun zoneOutline(): Boolean =
         safariZone() || FamilyConfigManager.config.highlight.bestiaryDrawingStyle == 1
 
-    /** The zone in effect: the picked one, or the area-derived one under Auto. */
+    private val SAFARI_INDEX: Int by lazy { ZONES.indexOf("Critter Safari") }
+
+    /**
+     * The zone in effect: the Critter Safari whenever you stand in it and its
+     * highlight is on (it is not in the dropdown, so it must win over a manual pick
+     * like "Torrhus Canyon", which is exactly what left a 26.2 user with nothing
+     * highlighted); otherwise the picked zone, or the area-derived one under Auto.
+     */
     fun resolvedZoneIndex(): Int {
+        val safari = FamilyConfigManager.config.safari
+        if (safari.enabled && safari.critterEsp && autoZoneIndex == SAFARI_INDEX) return SAFARI_INDEX
         val sel = FamilyConfigManager.config.highlight.bestiaryZone
         return if (sel != 0) sel else autoZoneIndex
     }
@@ -465,7 +474,7 @@ object BestiaryZoneHighlight {
             val cfg = FamilyConfigManager.config.highlight
 
             val safariWants = FamilyConfigManager.config.safari.let { it.enabled && it.critterEsp }
-            if (cfg.bestiaryZone == 0 && (cfg.zoneHighlightEnabled || safariWants) && ++autoTicker >= 20) { autoTicker = 0; pollAutoZone() }
+            if (((cfg.bestiaryZone == 0 && cfg.zoneHighlightEnabled) || safariWants) && ++autoTicker >= 20) { autoTicker = 0; pollAutoZone() }
             val zone = resolvedZoneIndex()
 
             val zoneChanged = zone != lastZoneIndex

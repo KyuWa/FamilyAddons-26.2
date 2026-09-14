@@ -22,7 +22,7 @@ class SafariConfig {
     @Expose @JvmField
     @ConfigOption(name = "Highlight Critters", desc = "Outline every Safari species, the awkward ones included — Hideyho, Hideonwall, Hideonfloor, Duplico, Bloodbat and the rest. Same matching the bestiary zone highlight used for the Safari, now owned here.")
     @ConfigEditorBoolean
-    var critterEsp = false
+    var critterEsp = true
 
     @Expose @JvmField
     @ConfigOption(name = "Critter Color", desc = "Colour of the critter outline.")
