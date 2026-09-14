@@ -17,6 +17,8 @@ object PartyCommands {
     private val ALLINV_REGEX = Regex("""^(?:allinv|ai|allinvite)$""", RegexOption.IGNORE_CASE)
     private val KICK_REGEX = Regex("""^(?:k|kick)\s+(\S+)$""", RegexOption.IGNORE_CASE)
     private val CALC_REGEX = Regex("""^(?:calc|c)\s+(.+)$""", RegexOption.IGNORE_CASE)
+    private val SAFARI_REGEX = Regex("""^(?:safari|critters|dex)$""", RegexOption.IGNORE_CASE)
+    private val RUNS_REGEX = Regex("""^runs$""", RegexOption.IGNORE_CASE)
 
     private val scheduler = Executors.newSingleThreadScheduledExecutor()
 
@@ -73,6 +75,17 @@ object PartyCommands {
         if (cfg.kickEnabled) {
             KICK_REGEX.find(body)?.let {
                 doKick(it.groupValues[1])
+                return
+            }
+        }
+
+        if (FamilyConfigManager.config.safari.partyCommands) {
+            if (body.matches(SAFARI_REGEX)) {
+                send("pc " + org.kyowa.familyaddons.features.safari.SafariTracker.partySummary())
+                return
+            }
+            if (body.matches(RUNS_REGEX)) {
+                send("pc " + org.kyowa.familyaddons.features.safari.SafariTracker.historySummary())
                 return
             }
         }

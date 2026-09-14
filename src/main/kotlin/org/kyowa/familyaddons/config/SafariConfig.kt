@@ -67,6 +67,16 @@ class SafariConfig {
     var perPlayerLines = true
 
     @Expose @JvmField
+    @ConfigOption(name = "Count every catch", desc = "Also show each player's total catches including duplicates, next to their unique count. Off shows uniques only.")
+    @ConfigEditorBoolean
+    var showTotals = true
+
+    @Expose @JvmField
+    @ConfigOption(name = "Party commands", desc = "Let the party ask for the run in party chat: !safari or !critters posts the current run, !runs posts your run history. Answers go to party chat, so this posts on your account. Still obeys the Party category's whitelist and its master toggle.")
+    @ConfigEditorBoolean
+    var partyCommands = false
+
+    @Expose @JvmField
     @ConfigOption(name = "Only in the Safari", desc = "Hide the panel outside the Critter Safari. Off shows it anywhere, which is useful for checking a finished run.")
     @ConfigEditorBoolean
     var onlyInSafari = true
@@ -85,6 +95,11 @@ class SafariConfig {
     @ConfigOption(name = "Also post to party chat", desc = "Send those announcements to party chat as well. Off by default: this posts on your account, and everyone running the mod would otherwise say the same thing at once.")
     @ConfigEditorBoolean
     var announceToParty = false
+
+    // Run history, written when a run with catches ends. Not user-editable.
+    @Expose @JvmField var runsDone = 0
+    @Expose @JvmField var lifetimeCatches = 0
+    @Expose @JvmField var bestUnique = 0
 
     @Expose @JvmField var hudX = 10
     @Expose @JvmField var hudY = 80

@@ -178,7 +178,11 @@ object TestCommand {
                     .then(literal("safari")
                         .executes { org.kyowa.familyaddons.features.safari.SafariTracker.printSummary(); 1 }
                         .then(literal("reset")
-                            .executes { org.kyowa.familyaddons.features.safari.SafariTracker.reset(true); 1 }))
+                            .executes { org.kyowa.familyaddons.features.safari.SafariTracker.reset(true); 1 })
+                        .then(literal("history")
+                            .executes { org.kyowa.familyaddons.features.safari.SafariTracker.printHistory(); 1 })
+                        .then(literal("share")
+                            .executes { org.kyowa.familyaddons.features.safari.SafariTracker.shareToParty(); 1 }))
 
                     // /fa ticketopen <channel_id> — clicked from a ticket line: jump the Discord app to it
                     .then(literal("ticketopen").requires { DevAccess.isDev() }
