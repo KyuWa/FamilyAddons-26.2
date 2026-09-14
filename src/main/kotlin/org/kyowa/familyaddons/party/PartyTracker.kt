@@ -46,9 +46,19 @@ object PartyTracker {
         val names = members.keys.mapTo(HashSet()) { it.lowercase() }
         if (self != null) names.add(self.lowercase())
         val cached = if (listedCount > 0) listedCount else names.size
+        return maxOf(cached, playersInWorld(), 1)
+    }
+
+    /**
+     * Real players in this world that also have a tab-list entry (Hypixel NPCs have
+     * no tab entry, tab info lines have no entity). Inside a private instance such as
+     * a Kuudra run this IS the party: nobody else can be there, and someone who
+     * disconnected is gone from it, so it is the number to trust over the cache.
+     */
+    fun playersInWorld(): Int {
+        val mc = Minecraft.getInstance()
         val tab = mc.connection?.onlinePlayers?.mapTo(HashSet()) { it.profile.id } ?: emptySet()
-        val inWorld = mc.level?.players()?.count { it.uuid in tab } ?: 0
-        return maxOf(cached, inWorld, 1)
+        return mc.level?.players()?.count { it.uuid in tab } ?: 0
     }
 
     fun register() {

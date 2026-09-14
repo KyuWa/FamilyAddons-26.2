@@ -179,9 +179,12 @@ object AutoRequeue {
     /** "Check Party Size": true (and says why) when fewer than 4 players are in the party. */
     private fun partyTooSmall(): Boolean {
         if (!FamilyConfigManager.config.kuudra.checkPartySize) return false
-        val n = PartyTracker.partySize()
+        // In the instance the world count is exact and the cache can only be stale
+        // (a name from an earlier party, a leave line it did not recognise), which
+        // is how a 3-man run slipped through the check: max(stale 4, real 3) = 4.
+        val n = if (inKuudraArea) PartyTracker.playersInWorld() else PartyTracker.partySize()
         if (n >= 4) return false
-        FaChat.send("§eOnly §c$n§e/4 players in the party — Kuudra requeue cancelled.")
+        FaChat.send("§eOnly §c$n§e/4 players here — Kuudra requeue cancelled.")
         return true
     }
 
