@@ -33,6 +33,9 @@ object SafariTracker {
     private val announcedPlayer = HashSet<String>()
     private val announcedParty = HashSet<SafariBiome>()
 
+    /** Biome of each player's most recent catch, used to break ties for their biome. */
+    private val lastBiome = HashMap<String, SafariBiome>()
+
     private var runStartMs = 0L
 
     // ── chat shapes ───────────────────────────────────────────────────────
@@ -98,6 +101,7 @@ object SafariTracker {
         if (player.isEmpty()) return
         if (runStartMs == 0L) runStartMs = System.currentTimeMillis()
         val set = caught.getOrPut(player) { LinkedHashSet() }
+        lastBiome[player] = critter.biome
         // Unique species only: catching a second Gemzie is not progress.
         if (!set.add(critter.name)) return
         checkPlayerBiome(player, critter.biome)
@@ -133,6 +137,7 @@ object SafariTracker {
 
     fun reset(announce: Boolean = false) {
         caught.clear()
+        lastBiome.clear()
         announcedPlayer.clear()
         announcedParty.clear()
         runStartMs = 0L
@@ -151,6 +156,28 @@ object SafariTracker {
 
     private fun partyTotal(): Int = caught.values.flatten().toSet().size
 
+    /**
+     * The biome a player is working: where they have caught the most. A party splits one
+     * biome each, so this is the number that matters; ties go to their most recent catch.
+     */
+    private fun mainBiome(player: String): SafariBiome? {
+        val counts = SafariBiome.entries.associateWith { countIn(player, it) }
+        val best = counts.values.max()
+        if (best == 0) return null
+        val tied = SafariBiome.entries.filter { counts[it] == best }
+        return tied.firstOrNull { it == lastBiome[player] } ?: tied.first()
+    }
+
+    /** "KyoWaa  Cavern 9/9 ✔  (13)" — their biome, its progress, and their run total. */
+    private fun playerLine(player: String): String {
+        val total = caught[player]?.size ?: 0
+        val biome = mainBiome(player) ?: return "§b$player §8- §7nothing yet"
+        val done = countIn(player, biome)
+        val of = SafariCritters.totalIn(biome)
+        val tick = if (done >= of) " §a✔" else ""
+        return "§b$player §8- ${biome.color}${biome.displayName} §f$done§7/$of$tick §8($total)"
+    }
+
     /** `/fa safari` — the same numbers as the HUD, printed into chat. */
     fun printSummary() {
         if (caught.isEmpty()) {
@@ -164,12 +191,7 @@ object SafariTracker {
             val tick = if (done >= total) " §a✔" else ""
             FaChat.send("  ${biome.color}${biome.displayName.padEnd(8)} §f$done§7/$total$tick")
         }
-        for ((player, set) in caught) {
-            val parts = SafariBiome.entries.joinToString(" ") { b ->
-                "${b.color}${b.tag}§f${countIn(player, b)}"
-            }
-            FaChat.send("  §b$player §8- $parts §8(${set.size})")
-        }
+        for (player in caught.keys) FaChat.send("  " + playerLine(player))
     }
 
     // ── HUD ────────────────────────────────────────────────────────────────
@@ -207,11 +229,8 @@ object SafariTracker {
 
         if (cfg.perPlayerLines && caught.isNotEmpty()) {
             y += 3
-            for ((player, set) in caught) {
-                val parts = SafariBiome.entries.joinToString(" ") { b ->
-                    "${b.color}${b.tag}§f${countIn(player, b)}"
-                }
-                ctx.text(tr, "§b$player §8$parts §8(${set.size})", 4, y, -1, true)
+            for (player in caught.keys) {
+                ctx.text(tr, playerLine(player), 4, y, -1, true)
                 y += 10
             }
         }
