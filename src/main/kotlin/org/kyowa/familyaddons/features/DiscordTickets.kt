@@ -222,8 +222,15 @@ object DiscordTickets {
             .append(button("[Log 1 run]", "§a", ClickEvent.RunCommand("/fa logrep ${t.channelId} 1"), "Send $label x1 in ${t.ign}'s ticket"))
         if (n > 1) line.append(Component.literal(" ")).append(button("[Log all $n]", "§e", ClickEvent.RunCommand("/fa logrep ${t.channelId} $n"), "Send $label x$n in ${t.ign}'s ticket"))
         if (claimed.size > 1) line.append(Component.literal(" §8(${claimed.size} claimed tickets, newest shown)"))
-        Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed(line))
+        // The run is counted right away; the prompt waits a second so it lands after
+        // the end-of-run chat spam instead of scrolling away inside it.
+        Thread({
+            Thread.sleep(LOG_PROMPT_DELAY_MS)
+            Minecraft.getInstance().execute { Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed(line)) }
+        }, "FA-Tickets-LogPrompt").apply { isDaemon = true; start() }
     }
+
+    private const val LOG_PROMPT_DELAY_MS = 1000L
 
     /**
      * `/fa logrep <channelId> <amt>`: clicked from the Kuudra-down prompt. Tells the
