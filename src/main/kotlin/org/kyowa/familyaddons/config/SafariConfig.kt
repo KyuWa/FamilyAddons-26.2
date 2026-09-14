@@ -49,6 +49,11 @@ class SafariConfig {
     @ConfigEditorColour
     var floorDropsColor = "0:255:80:255:80"
 
+    @Expose @JvmField
+    @ConfigOption(name = "Hideyho quick accept", desc = "When Hideyho asks \"How about it?\", the next click anywhere on the screen while chat is open picks [Sure] for you, running the exact click Hypixel put on that word. Fires once per run, then stays off until you enter the Safari again.")
+    @ConfigEditorBoolean
+    var hideyhoQuickAccept = false
+
     // ── run tracker ────────────────────────────────────────────────────
 
     @Expose @JvmField

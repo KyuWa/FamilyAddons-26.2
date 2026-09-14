@@ -157,6 +157,7 @@ object SafariTracker {
 
     fun reset(announce: Boolean = false) {
         archiveRun()
+        HideyhoQuickAccept.newRun()
         caught.clear()
         totals.clear()
         lastBiome.clear()

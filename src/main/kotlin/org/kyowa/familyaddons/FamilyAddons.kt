@@ -19,7 +19,7 @@ val COLOR_CODE_REGEX = Regex("§.")
 object FamilyAddons : ClientModInitializer {
 
     val LOGGER = LoggerFactory.getLogger("FamilyAddons")
-    const val VERSION = "1.1.3"
+    const val VERSION = "1.1.4"
     const val MC_VERSION = "26.2"
 
     private var hudEditorMouseWasDown = false
@@ -106,6 +106,7 @@ object FamilyAddons : ClientModInitializer {
         DiscordTickets.register()
         HelixWaypoints.register()
         org.kyowa.familyaddons.features.safari.SafariTracker.register()
+        org.kyowa.familyaddons.features.safari.HideyhoQuickAccept.register()
         NameStyle.register()
         NameSync.register()
 

@@ -83,7 +83,9 @@ object EntityHighlight {
         }
         // Mobs Hypixel renders without any nametag (e.g. Beeheemoth = a giant
         // bee): matched by entity type + size from the zone's entity rules.
-        if (BestiaryZoneHighlight.zoneOn() && entity !is ArmorStand && entity is LivingEntity) {
+        // Armour stands are allowed through: a rule only matches one when its
+        // entityType is armor_stand (the Gazer is exactly that, wearing a player head).
+        if (BestiaryZoneHighlight.zoneOn() && entity is LivingEntity) {
             if (BestiaryZoneHighlight.matchesNameless(entity)) return true
         }
         return false

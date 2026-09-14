@@ -72,6 +72,8 @@ object BestiaryZoneHighlight {
         val minWidth: Float = 0f,
         val maxWidth: Float = Float.MAX_VALUE,
         val variants: Set<String>? = null,
+        /** Item id the entity must wear on its head, e.g. "player_head"; null = any. */
+        val headItem: String? = null,
     )
 
     /**
@@ -128,6 +130,9 @@ object BestiaryZoneHighlight {
         // Entity dump 2026-09-09: the Blue Jay is a bare parrot (0.5 wide) with an
         // invisible "/!\" armour stand above it; blue is the only parrot colour seen.
         "blue jay"   to EntityRule("parrot", variants = setOf("blue")),
+        // Entity dump 2026-09-14 (Safari): a Gazer is an INVISIBLE armour stand (0.5 wide)
+        // wearing a player head, with a 0x0 name stand above it that no box can show.
+        "gazer"      to EntityRule("armor_stand", minWidth = 0.4f, maxWidth = 0.6f, headItem = "player_head"),
         // Entity dump 2026-09-09: Duplico hides as a block — an INVISIBLE silverfish
         // (0.4 wide) under an item display + 1.1 interaction box at the same spot.
         // EntityHighlight draws a full block box for it since the mob never renders.
@@ -326,7 +331,7 @@ object BestiaryZoneHighlight {
         if (bareMaxed.isEmpty() && bareCaps.isEmpty()) return
 
         val zonesByName = mutableMapOf<String, MutableSet<String>>()
-        for ((zone, mobs) in repoData.entries + customData.entries) {
+        for ((zone, mobs) in repoData.entries + remoteData.entries + customData.entries) {
             for (m in mobs) {
                 val n = cleanName(m.displayName)
                 val mapped = NAME_REMAPS[n.lowercase()] ?: n
@@ -373,6 +378,13 @@ object BestiaryZoneHighlight {
                 val key = variantKey(entity) ?: continue
                 if (variants.none { variantMatches(key, it) }) continue
             }
+            val head = rule.headItem
+            if (head != null) {
+                val living = entity as? net.minecraft.world.entity.LivingEntity ?: continue
+                val stack = living.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD)
+                val id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.item).path
+                if (stack.isEmpty || id != head) continue
+            }
             return true
         }
         return false
@@ -388,6 +400,7 @@ object BestiaryZoneHighlight {
             obj.get("minWidth")?.asFloat ?: 0f,
             obj.get("maxWidth")?.asFloat ?: Float.MAX_VALUE,
             variants,
+            obj.get("headItem")?.asString?.trim()?.lowercase()?.removePrefix("minecraft:")?.takeIf { it.isNotEmpty() },
         )
     }
     private var repoData: Map<String, List<MobEntry>> = emptyMap()
@@ -398,6 +411,16 @@ object BestiaryZoneHighlight {
     // released before the NEU repo catches up (or fix wrong entries).
     private var customData: Map<String, List<MobEntry>> = emptyMap()
     private var customLastModified = 0L
+
+    // Remote rules, same format as custom_bestiary.json, fetched from the repo so a
+    // critter that turns out not to be highlighted can be added for everyone without
+    // shipping an update. Merged between the NEU repo and the local custom file.
+    private const val REMOTE_RULES_URL =
+        "https://raw.githubusercontent.com/KyuWa/FamilyAddons-26.1.2/master/remote/bestiary_rules.json"
+    private const val REMOTE_REFRESH_MS = 10 * 60 * 1000L
+    private var remoteData: Map<String, List<MobEntry>> = emptyMap()
+    private var remoteFetchedAt = 0L
+    private val remoteHttp: HttpClient by lazy { HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build() }
 
     private val NAME_REMAPS = mapOf("sneaky creeper" to "Creeper")
 
@@ -460,6 +483,7 @@ object BestiaryZoneHighlight {
         CompletableFuture.runAsync {
             try {
                 if (!repoLoaded) loadRepo()
+                loadRemoteIfStale()
                 loadCustomIfChanged()
 
                 val cfg = FamilyConfigManager.config.highlight
@@ -608,12 +632,65 @@ object BestiaryZoneHighlight {
     /** NEU repo entries with custom-file entries merged on top (same name = replace). */
     private fun mergedZone(neuKey: String): List<MobEntry> {
         val base = repoData[neuKey].orEmpty()
+        val remote = remoteData[neuKey].orEmpty()
         val custom = customData[neuKey].orEmpty()
-        if (custom.isEmpty()) return base
+        if (remote.isEmpty() && custom.isEmpty()) return base
+        // Later layers win by name: NEU repo < remote rules < the user's own file.
         val byName = LinkedHashMap<String, MobEntry>()
         base.forEach { byName[it.displayName.lowercase()] = it }
+        remote.forEach { byName[it.displayName.lowercase()] = it }
         custom.forEach { byName[it.displayName.lowercase()] = it }
         return byName.values.toList()
+    }
+
+    /** Parses the custom / remote rule format: { zoneKey: { "mobs": [ {name, ...} ] } }. */
+    private fun parseRuleFile(root: JsonObject): Map<String, List<MobEntry>> {
+        val result = mutableMapOf<String, List<MobEntry>>()
+        for ((zoneKey, zoneVal) in root.entrySet()) {
+            if (zoneKey.startsWith("_")) continue
+            val arr = (zoneVal as? JsonObject)?.getAsJsonArray("mobs") ?: continue
+            val entries = mutableListOf<MobEntry>()
+            arr.forEach { el ->
+                val obj = el.asJsonObject
+                val name = obj.get("name")?.asString?.trim() ?: return@forEach
+                if (name.isEmpty()) return@forEach
+                val ids = obj.getAsJsonArray("mobs")?.map { it.asString }
+                    ?: listOf(name.lowercase().replace(" ", "_"))
+                val maxKills = obj.get("maxKills")?.asLong
+                    ?: obj.get("bracket")?.asInt?.let { neuBrackets[it]?.lastOrNull() }
+                    ?: Long.MAX_VALUE
+                entries.add(MobEntry(name, ids, maxKills, parseEntityRule(obj)))
+            }
+            if (entries.isNotEmpty()) result[zoneKey] = entries
+        }
+        return result
+    }
+
+    /**
+     * Fetches the remote rule file at most every [REMOTE_REFRESH_MS]. A failed fetch
+     * keeps whatever was loaded last; never throws into the refresh.
+     */
+    private fun loadRemoteIfStale() {
+        val now = System.currentTimeMillis()
+        if (now - remoteFetchedAt < REMOTE_REFRESH_MS) return
+        remoteFetchedAt = now
+        try {
+            val req = HttpRequest.newBuilder(URI.create(REMOTE_RULES_URL))
+                .timeout(java.time.Duration.ofSeconds(8)).GET().build()
+            val resp = remoteHttp.send(req, HttpResponse.BodyHandlers.ofString())
+            if (resp.statusCode() != 200) {
+                FamilyAddons.LOGGER.warn("BestiaryZoneHighlight: remote rules HTTP ${resp.statusCode()}")
+                return
+            }
+            val parsed = parseRuleFile(JsonParser.parseString(resp.body()).asJsonObject)
+            remoteData = parsed
+            FamilyAddons.LOGGER.info(
+                "BestiaryZoneHighlight: remote rules loaded — " +
+                    parsed.entries.joinToString { "${it.key}: ${it.value.map { m -> m.displayName }}" }.ifEmpty { "no entries" }
+            )
+        } catch (e: Exception) {
+            FamilyAddons.LOGGER.warn("BestiaryZoneHighlight: remote rules fetch failed: ${e.message}")
+        }
     }
 
     private fun customFile() =
@@ -642,25 +719,7 @@ object BestiaryZoneHighlight {
         if (mtime == customLastModified) return
         customLastModified = mtime
         try {
-            val root = JsonParser.parseString(file.readText()).asJsonObject
-            val result = mutableMapOf<String, List<MobEntry>>()
-            for ((zoneKey, zoneVal) in root.entrySet()) {
-                if (zoneKey.startsWith("_")) continue
-                val arr = (zoneVal as? JsonObject)?.getAsJsonArray("mobs") ?: continue
-                val entries = mutableListOf<MobEntry>()
-                arr.forEach { el ->
-                    val obj = el.asJsonObject
-                    val name = obj.get("name")?.asString?.trim() ?: return@forEach
-                    if (name.isEmpty()) return@forEach
-                    val ids = obj.getAsJsonArray("mobs")?.map { it.asString }
-                        ?: listOf(name.lowercase().replace(" ", "_"))
-                    val maxKills = obj.get("maxKills")?.asLong
-                        ?: obj.get("bracket")?.asInt?.let { neuBrackets[it]?.lastOrNull() }
-                        ?: Long.MAX_VALUE
-                    entries.add(MobEntry(name, ids, maxKills, parseEntityRule(obj)))
-                }
-                if (entries.isNotEmpty()) result[zoneKey] = entries
-            }
+            val result = parseRuleFile(JsonParser.parseString(file.readText()).asJsonObject)
             customData = result
             FamilyAddons.LOGGER.info(
                 "BestiaryZoneHighlight: custom bestiary loaded — " +
@@ -977,7 +1036,7 @@ object BestiaryZoneHighlight {
                 loadCustomIfChanged()
 
                 val knownNames = buildSet {
-                    (repoData.values + customData.values).flatten().forEach {
+                    (repoData.values + remoteData.values + customData.values).flatten().forEach {
                         add(it.displayName.replace(Regex("§[0-9a-fk-or]"), "").trim().lowercase())
                     }
                     NAME_REMAPS.values.forEach { add(it.lowercase()) }
