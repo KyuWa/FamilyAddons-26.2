@@ -113,10 +113,11 @@ object SafariTracker {
         return SafariAreaMap.biomeAt(player.x, player.y, player.z)
     }
 
-    /** Species in [biome] nobody in the party has caught yet, alphabetical. */
-    private fun missingIn(biome: SafariBiome): List<String> {
+    /** Species in [biome] nobody in the party has caught yet, common first, then by name. */
+    private fun missingIn(biome: SafariBiome): List<SafariCritter> {
         val everyone = caught.values.flatten().toSet()
-        return SafariCritters.inBiome(biome).map { it.name }.filter { it !in everyone }.sorted()
+        return SafariCritters.inBiome(biome).filter { it.name !in everyone }
+            .sortedWith(compareBy({ it.rarity.ordinal }, { it.name }))
     }
 
     // ── parsing ───────────────────────────────────────────────────────────
@@ -397,8 +398,8 @@ object SafariTracker {
         } else {
             ctx.text(tr, "${biome.color}§lMissing in ${biome.displayName} §8(§f${missing.size}§8)", 4, y, -1, true)
             y += 12
-            for (name in missing) {
-                ctx.text(tr, "§7- §f$name", 4, y, -1, true)
+            for (c in missing) {
+                ctx.text(tr, "§7- ${c.rarity.color}${c.name}", 4, y, -1, true)
                 y += 10
             }
         }
@@ -410,7 +411,7 @@ object SafariTracker {
         val tr = Minecraft.getInstance().font
         var y = 3
         ctx.text(tr, "§b§lMissing in Icy §8(§f3§8)", 4, y, -1, true); y += 12
-        for (name in listOf("Billygoat", "Troodon", "Wumpa")) { ctx.text(tr, "§7- §f$name", 4, y, -1, true); y += 10 }
+        for (line in listOf("§fTepid", "§9Billygoat", "§6Wumpa")) { ctx.text(tr, "§7- $line", 4, y, -1, true); y += 10 }
     }
 
     /** Preview lines for the HUD editor, so the box has a sensible size before a run. */

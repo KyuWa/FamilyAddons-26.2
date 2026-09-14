@@ -27,52 +27,57 @@ enum class SafariBiome(val displayName: String, val color: String) {
     }
 }
 
-data class SafariCritter(val name: String, val biome: SafariBiome)
+/** Hypixel rarity, used for the missing list's order and colour (common first). */
+enum class Rarity(val color: String) {
+    COMMON("§f"), UNCOMMON("§a"), RARE("§9"), EPIC("§5"), LEGENDARY("§6")
+}
+
+data class SafariCritter(val name: String, val biome: SafariBiome, val rarity: Rarity = Rarity.COMMON)
 
 object SafariCritters {
 
     val ALL: List<SafariCritter> = listOf(
         // Forest (9)
-        SafariCritter("Foxtrot", SafariBiome.FOREST),
-        SafariCritter("Bluebird", SafariBiome.FOREST),
-        SafariCritter("Honeybug", SafariBiome.FOREST),
-        SafariCritter("Treefrog", SafariBiome.FOREST),
-        SafariCritter("Woodchucker", SafariBiome.FOREST),
-        SafariCritter("Fluffling", SafariBiome.FOREST),
-        SafariCritter("Hideonfloor", SafariBiome.FOREST),
-        SafariCritter("Parakeet", SafariBiome.FOREST),
-        SafariCritter("Macaw", SafariBiome.FOREST),
+        SafariCritter("Foxtrot", SafariBiome.FOREST, Rarity.COMMON),
+        SafariCritter("Bluebird", SafariBiome.FOREST, Rarity.UNCOMMON),
+        SafariCritter("Honeybug", SafariBiome.FOREST, Rarity.UNCOMMON),
+        SafariCritter("Treefrog", SafariBiome.FOREST, Rarity.UNCOMMON),
+        SafariCritter("Woodchucker", SafariBiome.FOREST, Rarity.UNCOMMON),
+        SafariCritter("Fluffling", SafariBiome.FOREST, Rarity.RARE),
+        SafariCritter("Hideonfloor", SafariBiome.FOREST, Rarity.RARE),
+        SafariCritter("Parakeet", SafariBiome.FOREST, Rarity.RARE),
+        SafariCritter("Macaw", SafariBiome.FOREST, Rarity.LEGENDARY),
         // Cavern (9)
-        SafariCritter("Cavernfish", SafariBiome.CAVERN),
-        SafariCritter("Flitter", SafariBiome.CAVERN),
-        SafariCritter("Shyworm", SafariBiome.CAVERN),
-        SafariCritter("Driftling", SafariBiome.CAVERN),
-        SafariCritter("Chuckwalla", SafariBiome.CAVERN),
-        SafariCritter("Rockmite", SafariBiome.CAVERN),
-        SafariCritter("Scrappy", SafariBiome.CAVERN),
-        SafariCritter("Snoozle", SafariBiome.CAVERN),
-        SafariCritter("Gemzie", SafariBiome.CAVERN),
+        SafariCritter("Cavernfish", SafariBiome.CAVERN, Rarity.COMMON),
+        SafariCritter("Flitter", SafariBiome.CAVERN, Rarity.COMMON),
+        SafariCritter("Shyworm", SafariBiome.CAVERN, Rarity.COMMON),
+        SafariCritter("Driftling", SafariBiome.CAVERN, Rarity.UNCOMMON),
+        SafariCritter("Chuckwalla", SafariBiome.CAVERN, Rarity.RARE),
+        SafariCritter("Rockmite", SafariBiome.CAVERN, Rarity.RARE),
+        SafariCritter("Scrappy", SafariBiome.CAVERN, Rarity.RARE),
+        SafariCritter("Snoozle", SafariBiome.CAVERN, Rarity.RARE),
+        SafariCritter("Gemzie", SafariBiome.CAVERN, Rarity.EPIC),
         // Icy (9)
-        SafariCritter("Strongarm", SafariBiome.ICY),
-        SafariCritter("Tepid", SafariBiome.ICY),
-        SafariCritter("Polaris", SafariBiome.ICY),
-        SafariCritter("Shuddersquid", SafariBiome.ICY),
-        SafariCritter("Billygoat", SafariBiome.ICY),
-        SafariCritter("Mantis Shrimp", SafariBiome.ICY),
-        SafariCritter("Nozzlenose", SafariBiome.ICY),
-        SafariCritter("Troodon", SafariBiome.ICY),
-        SafariCritter("Wumpa", SafariBiome.ICY),
+        SafariCritter("Strongarm", SafariBiome.ICY, Rarity.COMMON),
+        SafariCritter("Tepid", SafariBiome.ICY, Rarity.COMMON),
+        SafariCritter("Polaris", SafariBiome.ICY, Rarity.UNCOMMON),
+        SafariCritter("Shuddersquid", SafariBiome.ICY, Rarity.UNCOMMON),
+        SafariCritter("Billygoat", SafariBiome.ICY, Rarity.RARE),
+        SafariCritter("Mantis Shrimp", SafariBiome.ICY, Rarity.RARE),
+        SafariCritter("Nozzlenose", SafariBiome.ICY, Rarity.RARE),
+        SafariCritter("Troodon", SafariBiome.ICY, Rarity.RARE),
+        SafariCritter("Wumpa", SafariBiome.ICY, Rarity.LEGENDARY),
         // Haunted (10)
-        SafariCritter("Areita", SafariBiome.HAUNTED),
-        SafariCritter("Bloodbat", SafariBiome.HAUNTED),
-        SafariCritter("Duplico", SafariBiome.HAUNTED),
-        SafariCritter("Gazer", SafariBiome.HAUNTED),
-        SafariCritter("Litterbug", SafariBiome.HAUNTED),
-        SafariCritter("Solsnatcher", SafariBiome.HAUNTED),
-        SafariCritter("Gimmiegold", SafariBiome.HAUNTED),
-        SafariCritter("Hideonwall", SafariBiome.HAUNTED),
-        SafariCritter("Hideyho", SafariBiome.HAUNTED),
-        SafariCritter("Doomspiral", SafariBiome.HAUNTED),
+        SafariCritter("Areita", SafariBiome.HAUNTED, Rarity.UNCOMMON),
+        SafariCritter("Bloodbat", SafariBiome.HAUNTED, Rarity.UNCOMMON),
+        SafariCritter("Duplico", SafariBiome.HAUNTED, Rarity.UNCOMMON),
+        SafariCritter("Gazer", SafariBiome.HAUNTED, Rarity.UNCOMMON),
+        SafariCritter("Litterbug", SafariBiome.HAUNTED, Rarity.UNCOMMON),
+        SafariCritter("Solsnatcher", SafariBiome.HAUNTED, Rarity.UNCOMMON),
+        SafariCritter("Gimmiegold", SafariBiome.HAUNTED, Rarity.RARE),
+        SafariCritter("Hideonwall", SafariBiome.HAUNTED, Rarity.RARE),
+        SafariCritter("Hideyho", SafariBiome.HAUNTED, Rarity.RARE),
+        SafariCritter("Doomspiral", SafariBiome.HAUNTED, Rarity.LEGENDARY),
     )
 
     val TOTAL: Int = ALL.size
