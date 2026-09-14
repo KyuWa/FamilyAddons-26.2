@@ -83,9 +83,9 @@ object EntityHighlight {
         }
         // Mobs Hypixel renders without any nametag (e.g. Beeheemoth = a giant
         // bee): matched by entity type + size from the zone's entity rules.
-        // Armour stands are allowed through: a rule only matches one when its
-        // entityType is armor_stand (the Gazer is exactly that, wearing a player head).
-        if (BestiaryZoneHighlight.zoneOn() && entity is LivingEntity) {
+        // Any entity may match a shape rule; the rule's entityType decides (armor_stand
+        // for the Gazer, interaction for a Rockmite mound), so nothing else leaks in.
+        if (BestiaryZoneHighlight.zoneOn()) {
             if (BestiaryZoneHighlight.matchesNameless(entity)) return true
         }
         return false
@@ -184,7 +184,7 @@ object EntityHighlight {
         // Invisible entities are skipped: the glow shader would draw their silhouette
         // (the silverfish hiding inside a Duplico, the name / capture armour stands),
         // and those already get the block box from the invisible fallback below.
-        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && entity in bestiaryHighlighted && !entity.isInvisible) {
+        if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && entity in bestiaryHighlighted && !entity.isInvisible && entity is LivingEntity) {
             return parseOutlineColor(BestiaryZoneHighlight.zoneColor())
         }
         if (!cfg.enabled) return 0
@@ -231,15 +231,19 @@ object EntityHighlight {
             // in the tab list — they will still be highlighted normally.
             if (isRealPlayer(entity)) return@forEach
             val manual = matchesManual(entity)
-            val bestiary = matchesBestiary(entity)
+            // A shape-rule hit IS the thing to mark (the Gazer's head-wearing stand, a
+            // mound's interaction box): it must not be resolved to a neighbour or dropped
+            // as a nametag stand, which is what the two guards below do for name matches.
+            val ruleHit = BestiaryZoneHighlight.zoneOn() && BestiaryZoneHighlight.matchesNameless(entity)
+            val bestiary = ruleHit || matchesBestiary(entity)
             if (manual || bestiary) {
                 // FIX: if resolveEntity returns null (nametag stand can't find its real mob
                 // because the mob died this tick), skip entirely. The old `?: entity` fallback
                 // would add the armor stand itself to `highlighted`, causing the tracer to
                 // briefly snap to the stand's position before it despawns — visible flicker.
-                val target = resolveEntity(entity) ?: return@forEach
+                val target = if (ruleHit) entity else (resolveEntity(entity) ?: return@forEach)
                 // Defensive: never highlight an invisible nametag stand directly.
-                if (target is ArmorStand && target.isInvisible) return@forEach
+                if (!ruleHit && target is ArmorStand && target.isInvisible) return@forEach
                 // Defensive: resolveEntity already filters real players, but double-check.
                 if (isRealPlayer(target)) return@forEach
                 if (!target.isAlive) return@forEach
@@ -299,7 +303,9 @@ object EntityHighlight {
             if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, Triple(r, g, b))
         }
         if (bestiaryActive() && BestiaryZoneHighlight.zoneOutline() && bestiaryHighlighted.isNotEmpty()) {
-            val hidden = bestiaryHighlighted.filterTo(HashSet()) { it.isInvisible }
+            // Invisible mobs and non-living targets (interaction boxes, displays) have
+            // nothing for the outline pass to draw: they get the box instead.
+            val hidden = bestiaryHighlighted.filterTo(HashSet()) { it.isInvisible || it !is LivingEntity }
             if (hidden.isNotEmpty()) drawBoxes(hidden - sparklingSet, parseRgb(BestiaryZoneHighlight.zoneColor(), Triple(1f, 0.67f, 0f)))
         }
 
@@ -381,7 +387,9 @@ object EntityHighlight {
      */
     private fun highlightBox(entity: Entity): AABB {
         val bb = entity.boundingBox
-        if (!entity.isInvisible || bb.xsize >= 1.0 || bb.ysize >= 1.0) return bb
+        val tiny = bb.xsize < 1.0 && bb.ysize < 1.0
+        val drawnAsIs = !entity.isInvisible && entity is LivingEntity
+        if (!tiny || drawnAsIs) return bb
         val cx = (bb.minX + bb.maxX) / 2.0
         val cz = (bb.minZ + bb.maxZ) / 2.0
         return AABB(cx - 0.5, bb.minY, cz - 0.5, cx + 0.5, bb.minY + 1.0, cz + 0.5)

@@ -130,6 +130,11 @@ object BestiaryZoneHighlight {
         // Entity dump 2026-09-09: the Blue Jay is a bare parrot (0.5 wide) with an
         // invisible "/!\" armour stand above it; blue is the only parrot colour seen.
         "blue jay"   to EntityRule("parrot", variants = setOf("blue")),
+        // Entity dump 2026-09-14 (Safari): a Rockmite mound, the little rock you click
+        // to make a Rockmite come out, is an item display plus a 0.45 x 0.31 interaction
+        // box at the same spot. Keyed on the species so the mound is marked as well as
+        // the mob; the interaction box is boxed at block size (no renderer to outline).
+        "rockmite"   to EntityRule("interaction", minWidth = 0.4f, maxWidth = 0.5f),
         // Entity dump 2026-09-14 (Safari): a Gazer is an INVISIBLE armour stand (0.5 wide)
         // wearing a player head, with a 0x0 name stand above it that no box can show.
         "gazer"      to EntityRule("armor_stand", minWidth = 0.4f, maxWidth = 0.6f, headItem = "player_head"),
