@@ -407,9 +407,12 @@ object BestiaryZoneHighlight {
     private var lastHideMaxed: Boolean = true
 
     /** Maxed mobs are always detected/persisted; whether they are hidden from
-     *  the highlight set is the user's choice (Hide Maxed Mobs toggle). */
+     *  the highlight set is the user's choice (Hide Maxed Mobs toggle). The
+     *  Critter Safari never hides them: there you want every critter marked
+     *  whatever its bestiary says, and a maxed dex would otherwise blank the
+     *  whole island (33 of 37 were maxed when this bit, 2026-09-14). */
     private fun applyMaxFilter(all: Set<String>, maxed: Set<String>): Set<String> =
-        if (FamilyConfigManager.config.highlight.hideMaxedMobs) all - maxed else all
+        if (FamilyConfigManager.config.highlight.hideMaxedMobs && !safariZone()) all - maxed else all
 
     fun register() {
         ClientTickEvents.END_CLIENT_TICK.register { _ ->
