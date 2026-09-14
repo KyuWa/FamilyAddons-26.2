@@ -165,14 +165,23 @@ object EntityHighlight {
 
     fun getOutlineColor(entity: Entity): Int {
         val cfg = FamilyConfigManager.config.highlight
+        // Critter Safari outlines belong to their own category and ignore this
+        // category's master toggle. Sparkling wins over the plain critter colour.
+        val safari = FamilyConfigManager.config.safari
+        if (entity in SparklingCritterHighlight.trackedEntities()) {
+            return parseOutlineColor(safari.sparklingColor)
+        }
+        if (entity in org.kyowa.familyaddons.features.safari.SafariCritterEsp.trackedEntities()) {
+            return parseOutlineColor(safari.critterEspColor)
+        }
         if (!cfg.enabled) return 0
         // Sparkling overrides the normal colors for both styles.
         val sparklingSet = SparklingCritterHighlight.trackedEntities()
         if (cfg.drawingStyle == 1 && entity in highlighted) {
-            return parseOutlineColor(if (entity in sparklingSet) cfg.sparklingColor else cfg.color)
+            return parseOutlineColor(if (entity in sparklingSet) safari.sparklingColor else cfg.color)
         }
         if (bestiaryActive() && cfg.bestiaryDrawingStyle == 1 && entity in bestiaryHighlighted) {
-            return parseOutlineColor(if (entity in sparklingSet) cfg.sparklingColor else cfg.bestiaryColor)
+            return parseOutlineColor(if (entity in sparklingSet) safari.sparklingColor else cfg.bestiaryColor)
         }
         return 0
     }
@@ -232,7 +241,8 @@ object EntityHighlight {
 
     fun onWorldRender(matrices: PoseStack, collector: SubmitNodeCollector, cam: Vec3) {
         val config = FamilyConfigManager.config.highlight
-        if (!config.enabled) return
+        // Safari highlights draw even with this category off; they are their own feature.
+        if (!config.enabled && SparklingCritterHighlight.trackedEntities().isEmpty()) return
         val shulkerTargets = ShulkerBoxHighlight.trackedEntities() + SparklingCritterHighlight.trackedEntities()
         val sparklingSet = SparklingCritterHighlight.trackedEntities().toSet()
         if (highlighted.isEmpty() && bestiaryHighlighted.isEmpty() && shulkerTargets.isEmpty()) return

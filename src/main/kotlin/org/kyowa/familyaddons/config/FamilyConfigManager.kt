@@ -179,6 +179,28 @@ object FamilyConfigManager {
                 if (!highlight.has(key)) highlight.add(key, v)
             }
         }
+
+        // Sparkling critters and floor drops moved from Highlight/BE to the new
+        // Critter Safari category (2026-09-14), under shorter names. Carry the
+        // user's toggles and colours over rather than silently turning a feature
+        // they were using back off.
+        (obj.get("highlight") as? JsonObject)?.let { highlight ->
+            val safari = obj.getAsJsonObject("safari") ?: JsonObject().also { obj.add("safari", it) }
+            val moves = mapOf(
+                "sparklingHighlightEnabled" to "sparklingEsp",
+                "sparklingColor" to "sparklingColor",
+                "floorDropsEnabled" to "floorDrops",
+                "floorDropsColor" to "floorDropsColor",
+            )
+            for ((from, to) in moves) {
+                val v = highlight.remove(from) ?: continue
+                if (!safari.has(to)) safari.add(to, v)
+            }
+            // "Critter Safari" was the last entry of the bestiary zone dropdown and
+            // is gone from it; a config still pointing there falls back to Auto.
+            val zone = highlight.get("bestiaryZone")?.takeIf { it.isJsonPrimitive }?.asInt
+            if (zone != null && zone >= 21) highlight.addProperty("bestiaryZone", 0)
+        }
     }
 
     fun save() {

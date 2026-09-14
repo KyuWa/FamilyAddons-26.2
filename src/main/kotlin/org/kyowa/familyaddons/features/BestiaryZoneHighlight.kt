@@ -204,7 +204,8 @@ object BestiaryZoneHighlight {
             a.contains("kuudra") -> "Kuudra"
             a.contains("torrhus") -> "Torrhus Canyon"
             a.contains("lotus") -> "Lotus Atoll"
-            a.contains("safari") -> "Critter Safari"
+            // The Safari has its own category now (SafariCritterEsp), so Auto
+            // never resolves to it and the two cannot double-highlight.
             else -> return -1
         }
         return ZONES.indexOf(name)

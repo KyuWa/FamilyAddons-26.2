@@ -47,25 +47,8 @@ class HighlightConfig {
     @ConfigEditorColour
     var shulkerColor = "0:255:200:100:255"
 
-    @Expose @JvmField
-    @ConfigOption(name = "Highlight Sparkling Critters", desc = "Highlight sparkling critters even before their nametag shows — detected by name, enchant glint, or the sparkle particles they emit. Only active while you are in the Critter Safari.")
-    @ConfigEditorBoolean
-    var sparklingHighlightEnabled = false
-
-    @Expose @JvmField
-    @ConfigOption(name = "Sparkling Color", desc = "Color of the sparkling critter highlight.")
-    @ConfigEditorColour
-    var sparklingColor = "0:255:255:230:120"
-
-    @Expose @JvmField
-    @ConfigOption(name = "Highlight Floor Drops", desc = "Outline the block under a floor drop (the sparkling little item pile on the ground) so you spot it from afar. Only active while you are in the Critter Safari.")
-    @ConfigEditorBoolean
-    var floorDropsEnabled = false
-
-    @Expose @JvmField
-    @ConfigOption(name = "Floor Drop Color", desc = "Color of the floor drop block outline.")
-    @ConfigEditorColour
-    var floorDropsColor = "0:255:80:255:80"
+    // Sparkling critters and floor drops moved to the Critter Safari category
+    // (2026-09-14), where they are independent of this category's master toggle.
 
     @Expose @JvmField
     @ConfigOption(name = "Tracer Lines", desc = "Draw lines from your crosshair to the nearest highlighted mobs (shulkers included).")
@@ -97,7 +80,7 @@ class HighlightConfig {
     @Expose @JvmField
     @ConfigAccordionId(id = 1)
     @ConfigOption(name = "Bestiary Zone", desc = "Select the zone to highlight bestiary mobs for. Fishing includes all fishing sub-zones (Lava, Backwater Bayou, festivals, Winter).")
-    @ConfigEditorDropdown(values = ["Auto (current area)", "Island", "Hub", "The Farming Lands", "The Garden", "Spider's Den", "The End", "Crimson Isle", "Deep Caverns", "Dwarven Mines", "Crystal Hollows", "The Park", "Moonglade Marsh", "Spooky Festival", "The Catacombs", "Fishing", "Mythological Creatures", "Jerry", "Kuudra", "Torrhus Canyon", "Lotus Atoll", "Critter Safari"])
+    @ConfigEditorDropdown(values = ["Auto (current area)", "Island", "Hub", "The Farming Lands", "The Garden", "Spider's Den", "The End", "Crimson Isle", "Deep Caverns", "Dwarven Mines", "Crystal Hollows", "The Park", "Moonglade Marsh", "Spooky Festival", "The Catacombs", "Fishing", "Mythological Creatures", "Jerry", "Kuudra", "Torrhus Canyon", "Lotus Atoll"])
     var bestiaryZone = 0  // 0 = Auto: zone follows the area you are in
 
     @Expose @JvmField

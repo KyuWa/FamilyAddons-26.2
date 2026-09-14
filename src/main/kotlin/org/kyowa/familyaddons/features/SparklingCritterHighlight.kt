@@ -52,10 +52,10 @@ object SparklingCritterHighlight {
     private val sparkling = mutableListOf<Entity>()
     private var tick = 0
 
-    private fun cfg() = FamilyConfigManager.config.highlight
+    private fun cfg() = FamilyConfigManager.config.safari
     /** Only in the Critter Safari (Mod API area "Safari"; tab list "Critter Safari"). */
     private fun inSafari() = HypixelLocation.areaName()?.contains("safari", ignoreCase = true) == true
-    private fun active() = cfg().enabled && cfg().sparklingHighlightEnabled && inSafari()
+    private fun active() = cfg().enabled && cfg().sparklingEsp && inSafari()
 
     fun trackedEntities(): List<Entity> = if (active()) sparkling else emptyList()
 
