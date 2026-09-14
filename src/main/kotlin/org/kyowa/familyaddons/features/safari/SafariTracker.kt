@@ -2,6 +2,7 @@ package org.kyowa.familyaddons.features.safari
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.minecraft.client.Minecraft
@@ -77,6 +78,12 @@ object SafariTracker {
             HudElement { ctx, _ -> runCatching { renderMissingHud(ctx) } }
         )
         // The biome you stand in is read off the scoreboard once a second, not per frame.
+        // A run lives on one server: every Hypixel transfer (warping in, leaving to a
+        // lobby, a new Safari) is a world join, so that is the run boundary. The
+        // "entered Critter Safari!" line still resets too, for the case where the
+        // world is entered before the run itself starts.
+        ClientPlayConnectionEvents.JOIN.register { _, _, _ -> reset(announce = false) }
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> reset(announce = false) }
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             pumpPartyQueue()
             if (++biomeTicker < 20) return@register
@@ -208,6 +215,8 @@ object SafariTracker {
     fun reset(announce: Boolean = false) {
         archiveRun()
         HideyhoQuickAccept.newRun()
+        synchronized(partyQueue) { partyQueue.clear() }
+        currentBiome = null
         caught.clear()
         totals.clear()
         lastBiome.clear()
