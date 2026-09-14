@@ -78,6 +78,7 @@ object SafariTracker {
         )
         // The biome you stand in is read off the scoreboard once a second, not per frame.
         ClientTickEvents.END_CLIENT_TICK.register { client ->
+            pumpPartyQueue()
             if (++biomeTicker < 20) return@register
             biomeTicker = 0
             currentBiome = runCatching { readBiome(client) }.getOrNull()
@@ -107,7 +108,8 @@ object SafariTracker {
     // ── parsing ───────────────────────────────────────────────────────────
 
     private fun onChat(plain: String) {
-        if (!FamilyConfigManager.config.safari.enabled) return
+        val s = FamilyConfigManager.config.safari
+        if (!s.enabled || !s.tracker) return
         if (plain.isEmpty() || PLAYER_SAID.matches(plain)) return
 
         ENTERED.find(plain)?.let { m ->
@@ -141,35 +143,51 @@ object SafariTracker {
         lastBiome[player] = critter.biome
         // Unique species only: catching a second Gemzie is not progress.
         if (!set.add(critter.name)) return
-        checkPlayerBiome(player, critter.biome)
-        checkPartyBiome(critter.biome)
+        // One catch can finish the biome for the player and for the party at once;
+        // that is one line, not two, or the second /pc trips Hypixel's cooldown.
+        val lines = listOfNotNull(playerBiomeDone(player, critter.biome), partyBiomeDone(critter.biome))
+        if (lines.isNotEmpty()) announce(lines.joinToString(" §8| "))
     }
 
-    private fun checkPlayerBiome(player: String, biome: SafariBiome) {
-        val mine = caught[player] ?: return
-        if (SafariCritters.inBiome(biome).any { it.name !in mine }) return
-        if (!announcedPlayer.add("$player|${biome.name}")) return
-        if (!FamilyConfigManager.config.safari.announcePlayerBiome) return
-        announce("§b$player §afinished ${biome.color}${biome.displayName}§a!")
+    /** The "finished" line when [player] has just completed [biome], else null. */
+    private fun playerBiomeDone(player: String, biome: SafariBiome): String? {
+        val mine = caught[player] ?: return null
+        if (SafariCritters.inBiome(biome).any { it.name !in mine }) return null
+        if (!announcedPlayer.add("$player|${biome.name}")) return null
+        if (!FamilyConfigManager.config.safari.announcePlayerBiome) return null
+        return "§b$player §afinished ${biome.color}${biome.displayName}§a!"
     }
 
-    private fun checkPartyBiome(biome: SafariBiome) {
+    /** The "done" line when the party has just cleared [biome], else null. */
+    private fun partyBiomeDone(biome: SafariBiome): String? {
         val everyone = caught.values.flatten().toSet()
-        if (SafariCritters.inBiome(biome).any { it.name !in everyone }) return
-        if (!announcedParty.add(biome)) return
-        if (!FamilyConfigManager.config.safari.announcePartyBiome) return
-        announce("${biome.color}${biome.displayName} §adone! §7(party)")
+        if (SafariCritters.inBiome(biome).any { it.name !in everyone }) return null
+        if (!announcedParty.add(biome)) return null
+        if (!FamilyConfigManager.config.safari.announcePartyBiome) return null
+        return "${biome.color}${biome.displayName} §adone! §7(party)"
     }
 
     /**
      * Local chat always; party chat only when the user turned it on, since that posts
-     * on their account.
+     * on their account. Party lines go through [partyQueue], one every 1.5 s, because
+     * Hypixel puts /pc on a cooldown and a second line inside it is simply dropped.
      */
     private fun announce(message: String) {
         FaChat.send(message)
         if (!FamilyConfigManager.config.safari.announceToParty) return
-        val plain = message.replace(COLOR_CODE_REGEX, "")
-        Minecraft.getInstance().player?.connection?.sendChat("/pc $plain")
+        synchronized(partyQueue) { partyQueue.addLast(message.replace(COLOR_CODE_REGEX, "")) }
+    }
+
+    private val partyQueue = ArrayDeque<String>()
+    private var partyCooldown = 0
+    private const val PARTY_SPACING_TICKS = 30
+
+    /** Sends at most one queued party line per [PARTY_SPACING_TICKS]. */
+    private fun pumpPartyQueue() {
+        if (partyCooldown > 0) { partyCooldown--; return }
+        val next = synchronized(partyQueue) { partyQueue.removeFirstOrNull() } ?: return
+        Minecraft.getInstance().player?.connection?.sendChat("/pc $next")
+        partyCooldown = PARTY_SPACING_TICKS
     }
 
     /**
@@ -256,8 +274,8 @@ object SafariTracker {
 
     /** `/fa safari share` — post the current run to party chat. */
     fun shareToParty() {
-        Minecraft.getInstance().player?.connection?.sendChat("/pc " + partySummary())
-        FaChat.send("§7Posted the run to party chat.")
+        synchronized(partyQueue) { partyQueue.addLast(partySummary()) }
+        FaChat.send("§7Posting the run to party chat.")
     }
 
     /**
@@ -308,7 +326,7 @@ object SafariTracker {
 
     private fun renderHud(ctx: GuiGraphicsExtractor) {
         val cfg = FamilyConfigManager.config.safari
-        if (!cfg.enabled || !cfg.trackerHud) return
+        if (!cfg.enabled || !cfg.tracker || !cfg.trackerHud) return
         if (caught.isEmpty()) return
         if (cfg.onlyInSafari && !inSafari()) return
 
