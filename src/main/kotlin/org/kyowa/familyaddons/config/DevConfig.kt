@@ -59,6 +59,16 @@ class DevConfig {
     var copyRawChatKey = GLFW.GLFW_KEY_UNKNOWN
 
     @Expose @JvmField
+    @ConfigOption(name = "Kuudra Script Reminder", desc = "One second after landing in a Kuudra run, warn in chat if the script below is not running (checked by looking for its name in any running process's command line).")
+    @ConfigEditorBoolean
+    var kuudraScriptReminder = false
+
+    @Expose @JvmField
+    @ConfigOption(name = "Kuudra Script Name", desc = "File name to look for, e.g. autoclicker.ahk.")
+    @ConfigEditorText
+    var kuudraScriptName = "autoclicker.ahk"
+
+    @Expose @JvmField
     @ConfigOption(name = "Admin Key", desc = "Admin key for /fa users, /fa online, name approvals and revokes (the workers' ADMIN_KEY secret).")
     @ConfigEditorText
     var presenceAdminKey = ""

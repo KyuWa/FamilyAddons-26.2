@@ -138,6 +138,8 @@ object AutoRequeue {
             kuudraDiedThisRun = false
             kuudraWaiting     = false
             kuudraWaitTicks   = 0
+            // Dev: script reminder, a second later so the join spam does not bury it.
+            scriptPromptTicks = 20
         }
         inKuudraArea = nowInArea
 
@@ -188,7 +190,29 @@ object AutoRequeue {
         return true
     }
 
+    private var scriptPromptTicks = 0
+
+    /** Dev-only: says so in chat if the configured script is not among the running processes. */
+    private fun checkScriptRunning() {
+        val dev = FamilyConfigManager.config.dev
+        if (!org.kyowa.familyaddons.util.DevAccess.isDev() || !dev.kuudraScriptReminder) return
+        val name = dev.kuudraScriptName.trim()
+        if (name.isEmpty()) return
+        Thread({
+            val running = try {
+                ProcessHandle.allProcesses().anyMatch { p ->
+                    val info = p.info()
+                    (info.commandLine().orElse("") + " " + info.command().orElse("")).contains(name, ignoreCase = true)
+                }
+            } catch (e: Exception) { true } // cannot tell: stay quiet rather than nag
+            if (!running) Minecraft.getInstance().execute {
+                FaChat.send("§c§l$name is not running!")
+            }
+        }, "FA-ScriptCheck").apply { isDaemon = true; start() }
+    }
+
     private fun tickKuudra() {
+        if (scriptPromptTicks > 0 && --scriptPromptTicks == 0) checkScriptRunning()
         if (kuudraDtAnnounceTicks > 0) {
             kuudraDtAnnounceTicks--
             if (kuudraDtAnnounceTicks == 0) {
