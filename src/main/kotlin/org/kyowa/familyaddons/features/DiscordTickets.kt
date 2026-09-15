@@ -235,20 +235,31 @@ object DiscordTickets {
         return if (n in 1..5) "T$n Kuudra" else "$t Kuudra"
     }
 
+    /**
+     * One prompt per claimed ticket: carrying two people at once is one kill for
+     * each of them, and each ticket is its own channel on its own server with its
+     * own log command (SkyBlockZ /logrep, Skyblock Maniacs /log). Kuudra Gang has
+     * no log command so its tickets are never in [claimed] and get no prompt.
+     */
     private fun onKuudraDown() {
-        val t = claimed.values.lastOrNull() ?: return
-        val n = (runsDone[t.channelId] ?: 0) + 1
-        runsDone[t.channelId] = n
-        val label = logLabel(t)
-        val line = Component.literal("§aKuudra down! §7Log rep for §b${t.ign} §8| §e$label §8| §7done since last log: §f$n  ")
-            .append(button("[Log 1 run]", "§a", ClickEvent.RunCommand("/fa logrep ${t.channelId} 1"), "Send $label x1 in ${t.ign}'s ticket"))
-        if (n > 1) line.append(Component.literal(" ")).append(button("[Log all $n]", "§e", ClickEvent.RunCommand("/fa logrep ${t.channelId} $n"), "Send $label x$n in ${t.ign}'s ticket"))
-        if (claimed.size > 1) line.append(Component.literal(" §8(${claimed.size} claimed tickets, newest shown)"))
-        // The run is counted right away; the prompt waits a second so it lands after
+        if (claimed.isEmpty()) return
+        val lines = claimed.values.toList().map { t ->
+            val n = (runsDone[t.channelId] ?: 0) + 1
+            runsDone[t.channelId] = n
+            val label = logLabel(t)
+            val line = Component.literal("§aKuudra down! §7Log rep for §b${t.ign} §8| §d${t.server} §8| ${tierColor(t.tier)}${t.tier} §8| §e$label §8| §7done since last log: §f$n  ")
+                .append(button("[Log 1 run]", "§a", ClickEvent.RunCommand("/fa logrep ${t.channelId} 1"), "Send $label x1 in ${t.ign}'s ${t.server} ticket"))
+            if (n > 1) line.append(Component.literal(" ")).append(button("[Log all $n]", "§e", ClickEvent.RunCommand("/fa logrep ${t.channelId} $n"), "Send $label x$n in ${t.ign}'s ${t.server} ticket"))
+            line
+        }
+        // The runs are counted right away; the prompts wait a second so they land after
         // the end-of-run chat spam instead of scrolling away inside it.
         Thread({
             Thread.sleep(LOG_PROMPT_DELAY_MS)
-            Minecraft.getInstance().execute { Minecraft.getInstance().player?.sendSystemMessage(FaChat.prefixed(line)) }
+            Minecraft.getInstance().execute {
+                val p = Minecraft.getInstance().player ?: return@execute
+                for (line in lines) p.sendSystemMessage(FaChat.prefixed(line))
+            }
         }, "FA-Tickets-LogPrompt").apply { isDaemon = true; start() }
     }
 
